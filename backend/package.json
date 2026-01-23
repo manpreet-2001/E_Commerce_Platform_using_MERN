@@ -12,7 +12,8 @@
     "mern",
     "nodejs",
     "express",
-    "mongodb"
+    "mongodb",
+    "electronics"
   ],
   "author": "Manpreet Singh",
   "license": "ISC",
@@ -27,5 +28,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-  }
+  },
+  "type": "commonjs"
 }
