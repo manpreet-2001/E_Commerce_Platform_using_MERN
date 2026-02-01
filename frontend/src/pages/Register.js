@@ -1,24 +1,32 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import './Register.css';
+import Navbar from '../components/Navbar';
+import './Auth.css';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
+    phone: '',
+    role: 'customer',
     password: '',
     confirmPassword: '',
-    role: 'customer'
+    agreeTerms: false
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { name, email, password, confirmPassword, role } = formData;
+  const { firstName, lastName, email, phone, role, password, confirmPassword, agreeTerms } = formData;
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
     setError('');
   };
 
@@ -28,8 +36,8 @@ const Register = () => {
     setSuccess('');
 
     // Validation
-    if (!name || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+      setError('Please fill in all required fields');
       return;
     }
 
@@ -43,28 +51,24 @@ const Register = () => {
       return;
     }
 
+    if (!agreeTerms) {
+      setError('You must agree to the Terms of Service');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await axios.post('/api/auth/register', {
-        name,
+        name: `${firstName} ${lastName}`,
         email,
         password,
         role
       });
 
-      setSuccess('Registration successful! Redirecting to login...');
-      setFormData({
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        role: 'customer'
-      });
-
-      // Store token and redirect (you can customize this)
+      setSuccess('Account created successfully! Redirecting...');
       localStorage.setItem('token', res.data.token);
-      
+
       setTimeout(() => {
         window.location.href = '/';
       }, 2000);
@@ -77,95 +81,82 @@ const Register = () => {
   };
 
   return (
-    <div className="register-container">
-      <div className="register-wrapper">
-        {/* Left Side - Branding */}
-        <div className="register-branding">
-          <div className="branding-content">
-            <h1>CityTech Store</h1>
-            <p>Your one-stop destination for premium electronics</p>
-            <div className="features">
-              <div className="feature-item">
-                <span className="feature-icon">🛒</span>
-                <span>Wide Range of Products</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">🚚</span>
-                <span>Fast & Free Delivery</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">🔒</span>
-                <span>Secure Payments</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">💬</span>
-                <span>24/7 Support</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="auth-page">
+      <Navbar />
+      
+      <div className="auth-hero">
+        <h1>Welcome to Store</h1>
+        <p>Your trusted partner for vehicle maintenance and repair services</p>
+      </div>
 
-        {/* Right Side - Form */}
-        <div className="register-form-container">
-          <div className="form-header">
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-header">
             <h2>Create Account</h2>
-            <p>Join us and start shopping today</p>
+            <p>Join Store community today</p>
           </div>
 
-          {error && <div className="alert alert-error">{error}</div>}
-          {success && <div className="alert alert-success">{success}</div>}
+          {error && <div className="auth-alert auth-alert-error">{error}</div>}
+          {success && <div className="auth-alert auth-alert-success">{success}</div>}
 
-          <form onSubmit={handleSubmit} className="register-form">
-            <div className="form-group">
-              <label htmlFor="name">Full Name</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={name}
-                onChange={handleChange}
-                placeholder="Enter your full name"
-                autoComplete="name"
-              />
+          <form onSubmit={handleSubmit} className="auth-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="firstName">First Name</label>
+                <div className="input-wrapper">
+                  <input
+                    type="text"
+                    id="firstName"
+                    name="firstName"
+                    value={firstName}
+                    onChange={handleChange}
+                    placeholder="First name"
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="lastName">Last Name</label>
+                <div className="input-wrapper">
+                  <input
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    value={lastName}
+                    onChange={handleChange}
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="form-group">
               <label htmlFor="email">Email Address</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={email}
-                onChange={handleChange}
-                placeholder="Enter your email"
-                autoComplete="email"
-              />
+              <div className="input-wrapper">
+                <span className="input-icon">✉</span>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                />
+              </div>
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={password}
-                onChange={handleChange}
-                placeholder="Create a password"
-                autoComplete="new-password"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm your password"
-                autoComplete="new-password"
-              />
+              <label htmlFor="phone">Phone Number</label>
+              <div className="input-wrapper">
+                <span className="input-icon">📞</span>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={phone}
+                  onChange={handleChange}
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
             </div>
 
             <div className="form-group">
@@ -181,20 +172,58 @@ const Register = () => {
               </select>
             </div>
 
-            <button 
-              type="submit" 
-              className={`btn-register ${loading ? 'loading' : ''}`}
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <div className="input-wrapper">
+                <span className="input-icon">🔒</span>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={password}
+                  onChange={handleChange}
+                  placeholder="Create a strong password"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <div className="input-wrapper">
+                <span className="input-icon">🔒</span>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm your password"
+                />
+              </div>
+            </div>
+
+            <label className="terms-label">
+              <input
+                type="checkbox"
+                name="agreeTerms"
+                checked={agreeTerms}
+                onChange={handleChange}
+              />
+              <span>
+                I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>
+              </span>
+            </label>
+
+            <button
+              type="submit"
+              className={`btn-submit ${loading ? 'loading' : ''}`}
               disabled={loading}
             >
-              {loading ? (
-                <span className="spinner"></span>
-              ) : (
-                'Create Account'
-              )}
+              {loading ? <span className="spinner"></span> : 'Create Account'}
             </button>
           </form>
 
-          <div className="form-footer">
+          <div className="auth-footer">
             <p>
               Already have an account? <Link to="/login">Sign In</Link>
             </p>
