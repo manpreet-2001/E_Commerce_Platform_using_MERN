@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <nav className="navbar">
@@ -36,12 +38,23 @@ const Navbar = () => {
         </ul>
 
         <div className="nav-auth">
-          <Link to="/login" className={`nav-auth-link ${location.pathname === '/login' ? 'active' : ''}`}>
-            Login
-          </Link>
-          <Link to="/register" className={`nav-auth-link ${location.pathname === '/register' ? 'active' : ''}`}>
-            Register
-          </Link>
+          {isAuthenticated() ? (
+            <>
+              <span className="nav-user">Hi, {user?.name?.split(' ')[0]}</span>
+              <button onClick={logout} className="nav-logout-btn">
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className={`nav-auth-link ${location.pathname === '/login' ? 'active' : ''}`}>
+                Login
+              </Link>
+              <Link to="/register" className={`nav-auth-link ${location.pathname === '/register' ? 'active' : ''}`}>
+                Register
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

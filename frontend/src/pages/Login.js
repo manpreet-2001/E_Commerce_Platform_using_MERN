@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import './Auth.css';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -35,20 +38,18 @@ const Login = () => {
 
     setLoading(true);
 
-    try {
-      const res = await axios.post('/api/auth/login', { email, password });
-      
-      localStorage.setItem('token', res.data.token);
+    const result = await login(email, password);
+    
+    if (result.success) {
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
       }
-      
-      window.location.href = '/';
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
+      navigate('/');
+    } else {
+      setError(result.message);
     }
+    
+    setLoading(false);
   };
 
   return (

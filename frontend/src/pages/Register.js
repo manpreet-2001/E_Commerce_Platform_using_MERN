@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import './Auth.css';
 
 const Register = () => {
+  const navigate = useNavigate();
+  const { register } = useAuth();
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -58,26 +61,23 @@ const Register = () => {
 
     setLoading(true);
 
-    try {
-      const res = await axios.post('/api/auth/register', {
-        name: `${firstName} ${lastName}`,
-        email,
-        password,
-        role
-      });
+    const result = await register({
+      name: `${firstName} ${lastName}`,
+      email,
+      password,
+      role
+    });
 
+    if (result.success) {
       setSuccess('Account created successfully! Redirecting...');
-      localStorage.setItem('token', res.data.token);
-
       setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
-
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
+        navigate('/');
+      }, 1500);
+    } else {
+      setError(result.message);
     }
+    
+    setLoading(false);
   };
 
   return (
