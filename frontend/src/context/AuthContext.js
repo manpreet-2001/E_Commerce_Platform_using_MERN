@@ -3,8 +3,8 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-// Configure axios base URL
-axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// Configure axios base URL: use env var or empty (empty = same origin, proxy in dev)
+axios.defaults.baseURL = process.env.REACT_APP_API_URL || '';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Load user on mount if token exists
+  // Load user when token exists
   useEffect(() => {
     const loadUser = async () => {
       if (token) {
@@ -36,8 +36,12 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
 
-    loadUser();
-  }, []);
+    if (token) {
+      loadUser();
+    } else {
+      setLoading(false);
+    }
+  }, [token]);
 
   // Register user
   const register = async (userData) => {
@@ -52,10 +56,12 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true, message: res.data.message };
     } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Registration failed'
-      };
+      const data = error.response?.data;
+      const message = data?.message || data?.error
+        || (error.code === 'ERR_NETWORK' || !error.response
+          ? 'Cannot connect to server. Make sure the backend is running (npm run dev in backend folder).'
+          : `Registration failed${error.response?.status ? ` (${error.response.status})` : ''}`);
+      return { success: false, message };
     }
   };
 
@@ -72,10 +78,11 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true, message: res.data.message };
     } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Login failed'
-      };
+      const message = error.response?.data?.message
+        || (error.code === 'ERR_NETWORK' || !error.response
+          ? 'Cannot connect to server. Make sure the backend is running (npm run dev in backend folder).'
+          : 'Login failed');
+      return { success: false, message };
     }
   };
 

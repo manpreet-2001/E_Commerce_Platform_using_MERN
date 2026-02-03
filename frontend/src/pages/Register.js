@@ -21,6 +21,8 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { firstName, lastName, email, phone, role, password, confirmPassword, agreeTerms } = formData;
 
@@ -146,15 +148,20 @@ const Register = () => {
 
             <div className="form-group">
               <label htmlFor="phone">Phone Number</label>
-              <div className="input-wrapper">
-                <span className="input-icon">📞</span>
+              <div className="input-wrapper has-prefix">
+                <span className="input-icon input-icon-phone" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                </span>
+                <span className="phone-prefix">+1 </span>
                 <input
                   type="tel"
                   id="phone"
                   name="phone"
                   value={phone}
                   onChange={handleChange}
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="(555) 123-4567"
                 />
               </div>
             </div>
@@ -174,31 +181,49 @@ const Register = () => {
 
             <div className="form-group">
               <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
+              <div className="input-wrapper has-toggle">
                 <span className="input-icon">🔒</span>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   name="password"
                   value={password}
                   onChange={handleChange}
                   placeholder="Create a strong password"
                 />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
               </div>
             </div>
 
             <div className="form-group">
               <label htmlFor="confirmPassword">Confirm Password</label>
-              <div className="input-wrapper">
+              <div className="input-wrapper has-toggle">
                 <span className="input-icon">🔒</span>
                 <input
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   id="confirmPassword"
                   name="confirmPassword"
                   value={confirmPassword}
                   onChange={handleChange}
                   placeholder="Confirm your password"
                 />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? 'Hide' : 'Show'}
+                </button>
               </div>
             </div>
 
