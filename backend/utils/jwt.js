@@ -1,5 +1,13 @@
 const jwt = require('jsonwebtoken');
 
+const getSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.trim() === '') {
+    throw new Error('JWT_SECRET is not set. Add it to your .env file (see .env.example).');
+  }
+  return secret;
+};
+
 /**
  * Generate JWT Token
  * @param {string} userId - User's MongoDB _id
@@ -8,7 +16,7 @@ const jwt = require('jsonwebtoken');
 const generateToken = (userId) => {
   return jwt.sign(
     { id: userId },
-    process.env.JWT_SECRET,
+    getSecret(),
     { expiresIn: '7d' }
   );
 };
@@ -20,7 +28,7 @@ const generateToken = (userId) => {
  * @throws {Error} If token is invalid or expired
  */
 const verifyToken = (token) => {
-  return jwt.verify(token, process.env.JWT_SECRET);
+  return jwt.verify(token, getSecret());
 };
 
 /**

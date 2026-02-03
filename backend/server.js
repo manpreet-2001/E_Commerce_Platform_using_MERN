@@ -6,6 +6,11 @@ require('dotenv').config();
 // Import database connection
 const connectDB = require('./config/db');
 
+// Warn if JWT_SECRET is missing (registration/login will fail without it)
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
+  console.warn('⚠️  JWT_SECRET is not set in .env. Auth (register/login) will fail. Copy .env.example to .env and set JWT_SECRET.');
+}
+
 const app = express();
 
 // Middleware

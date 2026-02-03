@@ -11,8 +11,16 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide name, email and password'
+      });
+    }
+
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ 
         success: false, 
@@ -20,12 +28,21 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    // Normalize role to lowercase (enum expects customer, vendor, admin)
+    const normalizedRole = (role && typeof role === 'string') ? role.trim().toLowerCase() : 'customer';
+    if (!['customer', 'vendor', 'admin'].includes(normalizedRole)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be customer, vendor, or admin.'
+      });
+    }
+
     // Create new user
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       password,
-      role: role || 'customer'
+      role: normalizedRole
     });
 
     // Generate token
@@ -46,15 +63,37 @@ router.post('/register', async (req, res) => {
     // Handle validation errors
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ 
-        success: false, 
-        message: messages.join(', ') 
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
       });
     }
-    
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error during registration' 
+
+    // Handle MongoDB duplicate key (email already exists)
+    if (error.code === 11000 || (error.message && error.message.includes('E11000'))) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    // Log full error for debugging
+    console.error('Registration error:', error.message);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(error.stack);
+    }
+
+    // Return user-friendly message for known issues
+    let message = 'Server error during registration. Check server logs.';
+    if (error.message && error.message.includes('JWT_SECRET')) {
+      message = 'Server misconfiguration: JWT_SECRET is not set. Create a .env file with JWT_SECRET (see .env.example).';
+    } else if (error.name === 'MongoServerError' || error.message && error.message.includes('Mongo')) {
+      message = 'Database error. Make sure MongoDB is running and MONGODB_URI is correct in .env.';
+    }
+
+    res.status(500).json({
+      success: false,
+      message
     });
   }
 });
