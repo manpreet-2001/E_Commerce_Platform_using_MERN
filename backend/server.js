@@ -16,11 +16,9 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-// app.use('/api/products', require('./routes/products'));
-// app.use('/api/cart', require('./routes/cart'));
-// app.use('/api/orders', require('./routes/orders'));
+// Register all routes from service.js (each route in its own file)
+const registerRoutes = require('./service');
+registerRoutes(app);
 
 // Basic route
 app.get('/', (req, res) => {

@@ -1,0 +1,21 @@
+/**
+ * Central route registration - every route file is registered here
+ */
+
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+// const cartRoutes = require('./routes/cart');
+// const orderRoutes = require('./routes/orders');
+
+/**
+ * Register all API routes on the Express app
+ * @param {import('express').Application} app - Express application instance
+ */
+function registerRoutes(app) {
+  app.use('/api/auth', authRoutes);
+  app.use('/api/products', productRoutes);
+  // app.use('/api/cart', cartRoutes);
+  // app.use('/api/orders', orderRoutes);
+}
+
+module.exports = registerRoutes;
