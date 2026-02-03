@@ -1,11 +1,17 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <nav className="navbar">
@@ -41,7 +47,7 @@ const Navbar = () => {
           {isAuthenticated() ? (
             <>
               <span className="nav-user">Hi, {user?.name?.split(' ')[0]}</span>
-              <button onClick={logout} className="nav-logout-btn">
+              <button type="button" onClick={handleLogout} className="nav-logout-btn">
                 Logout
               </button>
             </>

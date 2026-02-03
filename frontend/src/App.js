@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -31,6 +31,12 @@ const GuestRoute = ({ children }) => {
 // Home Page Component
 const HomePage = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <div className="home-page">
@@ -43,7 +49,7 @@ const HomePage = () => {
             <p className="welcome-text">Hello, {user?.name}!</p>
             <div className="hero-buttons">
               <a href="/dashboard" className="btn-primary">Go to Dashboard</a>
-              <button onClick={logout} className="btn-secondary">Logout</button>
+              <button type="button" onClick={handleLogout} className="btn-secondary">Logout</button>
             </div>
           </div>
         ) : (
