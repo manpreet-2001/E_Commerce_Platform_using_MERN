@@ -4,6 +4,7 @@
 
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
+const uploadRoutes = require('./routes/upload');
 // const cartRoutes = require('./routes/cart');
 // const orderRoutes = require('./routes/orders');
 
@@ -14,6 +15,7 @@ const productRoutes = require('./routes/products');
 function registerRoutes(app) {
   app.use('/api/auth', authRoutes);
   app.use('/api/products', productRoutes);
+  app.use('/api/upload', uploadRoutes);
   // app.use('/api/cart', cartRoutes);
   // app.use('/api/orders', orderRoutes);
 }
