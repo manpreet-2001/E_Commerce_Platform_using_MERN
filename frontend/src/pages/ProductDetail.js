@@ -4,11 +4,22 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import './Products.css';
 
+const CATEGORY_LABELS = {
+  electronics: 'Electronics',
+  phones: 'Phones',
+  laptops: 'Laptops',
+  accessories: 'Accessories',
+  audio: 'Audio',
+  gaming: 'Gaming',
+  other: 'Other'
+};
+
 const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -29,6 +40,13 @@ const ProductDetail = () => {
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price);
+  };
+
+  const formatCategory = (cat) => CATEGORY_LABELS[cat] || cat;
+
+  const handleAddToCart = () => {
+    // Placeholder - cart integration can be added later
+    alert('Add to cart coming soon!');
   };
 
   if (loading) {
@@ -62,7 +80,14 @@ const ProductDetail = () => {
       <Navbar />
       <main className="products-main">
         <div className="products-container">
+          {/* Breadcrumb */}
+          <nav className="detail-breadcrumb" aria-label="Breadcrumb">
+            <Link to="/products">Products</Link>
+            <span className="breadcrumb-sep">/</span>
+            <span className="breadcrumb-current">{product.name}</span>
+          </nav>
           <Link to="/products" className="detail-back">← Back to products</Link>
+
           <div className="product-detail">
             <div className="product-detail-image-wrap">
               {product.image ? (
@@ -75,7 +100,7 @@ const ProductDetail = () => {
               )}
             </div>
             <div className="product-detail-info">
-              <span className="product-detail-category">{product.category}</span>
+              <span className="product-detail-category">{formatCategory(product.category)}</span>
               <h1 className="product-detail-title">{product.name}</h1>
               <p className="product-detail-price">{formatPrice(product.price)}</p>
               {product.description && (
@@ -90,6 +115,31 @@ const ProductDetail = () => {
               </p>
               {product.vendor && (
                 <p className="product-detail-vendor">Sold by {product.vendor.name}</p>
+              )}
+
+              {/* Quantity & Add to Cart */}
+              {product.stock > 0 && (
+                <div className="product-detail-actions">
+                  <div className="detail-quantity">
+                    <label htmlFor="quantity">Quantity</label>
+                    <input
+                      type="number"
+                      id="quantity"
+                      min={1}
+                      max={product.stock}
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock, parseInt(e.target.value, 10) || 1)))}
+                      className="detail-quantity-input"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-add-to-cart"
+                    onClick={handleAddToCart}
+                  >
+                    Add to Cart
+                  </button>
+                </div>
               )}
             </div>
           </div>
