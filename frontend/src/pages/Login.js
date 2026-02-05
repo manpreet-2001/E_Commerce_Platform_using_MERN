@@ -59,7 +59,7 @@ const Login = () => {
       
       <div className="auth-hero">
         <h1>Welcome to Store</h1>
-        <p>Your trusted partner for vehicle maintenance and repair services</p>
+        <p>Your trusted partner for quality electronics and accessories</p>
       </div>
 
       <div className="auth-container">
