@@ -12,15 +12,23 @@ const canModifyProduct = (req, product) => {
 };
 
 // @route   GET /api/products
-// @desc    Get all products
+// @desc    Get all products (optional: category, search by name/description)
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const { category } = req.query;
+    const { category, search } = req.query;
     const filter = {};
 
     if (category) {
       filter.category = category;
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      const term = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } }
+      ];
     }
 
     const products = await Product.find(filter)

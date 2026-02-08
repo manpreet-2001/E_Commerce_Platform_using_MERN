@@ -15,18 +15,30 @@ const CATEGORIES = [
   { value: 'other', label: 'Other' }
 ];
 
+const DEBOUNCE_MS = 400;
+
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [category, setCategory] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       setError('');
       try {
-        const params = category ? { category } : {};
+        const params = {};
+        if (category) params.category = category;
+        if (search) params.search = search;
         const res = await axios.get('/api/products', { params });
         const list = res.data?.data ?? res.data;
         setProducts(Array.isArray(list) ? list : []);
@@ -44,7 +56,7 @@ const Products = () => {
     };
 
     fetchProducts();
-  }, [category]);
+  }, [category, search]);
 
   const getCategoryLabel = (cat) => CATEGORIES.find(c => c.value === cat)?.label || cat;
 
@@ -61,20 +73,34 @@ const Products = () => {
 
       <main className="products-main">
         <div className="products-container">
-          {/* Category filter */}
+          {/* Search and filters */}
           <div className="products-filters">
-            <span className="filter-label">Category:</span>
-            <div className="filter-pills">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.value || 'all'}
-                  type="button"
-                  className={`filter-pill ${!category && !cat.value ? 'active' : category === cat.value ? 'active' : ''}`}
-                  onClick={() => setCategory(cat.value)}
-                >
-                  {cat.label}
-                </button>
-              ))}
+            <div className="products-search-wrap">
+              <label htmlFor="product-search" className="filter-label">Search</label>
+              <input
+                id="product-search"
+                type="search"
+                placeholder="Search by name or description..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="products-search-input"
+                aria-label="Search products"
+              />
+            </div>
+            <div className="products-filters-row">
+              <span className="filter-label">Category:</span>
+              <div className="filter-pills">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.value || 'all'}
+                    type="button"
+                    className={`filter-pill ${!category && !cat.value ? 'active' : category === cat.value ? 'active' : ''}`}
+                    onClick={() => setCategory(cat.value)}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -92,8 +118,14 @@ const Products = () => {
           ) : products.length === 0 ? (
             <div className="products-empty">
               <div className="empty-icon">📦</div>
-              <h2>No products yet</h2>
-              <p>{category ? `No products in "${getCategoryLabel(category)}".` : 'Be the first to add products.'}</p>
+              <h2>No products found</h2>
+              <p>
+                {search
+                  ? `No products match "${search}"${category ? ` in ${getCategoryLabel(category)}` : ''}. Try a different search or category.`
+                  : category
+                    ? `No products in "${getCategoryLabel(category)}".`
+                    : 'Be the first to add products.'}
+              </p>
             </div>
           ) : (
             <div className="products-grid">
