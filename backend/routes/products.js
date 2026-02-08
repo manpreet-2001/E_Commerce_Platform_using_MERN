@@ -33,6 +33,8 @@ router.get('/', async (req, res) => {
       data: products
     });
   } catch (error) {
+    console.error('GET /api/products error:', error.message || error);
+    if (process.env.NODE_ENV !== 'production') console.error(error.stack);
     res.status(500).json({
       success: false,
       message: 'Server error while fetching products'
@@ -66,6 +68,8 @@ router.get('/:id', async (req, res) => {
         message: 'Product not found'
       });
     }
+    console.error('GET /api/products/:id error:', error.message || error);
+    if (process.env.NODE_ENV !== 'production') console.error(error.stack);
     res.status(500).json({
       success: false,
       message: 'Server error while fetching product'

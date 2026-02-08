@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import ProductCard from '../components/ProductCard';
 import './Products.css';
 
 const CATEGORIES = [
@@ -28,9 +28,15 @@ const Products = () => {
       try {
         const params = category ? { category } : {};
         const res = await axios.get('/api/products', { params });
-        setProducts(res.data.data || []);
+        const list = res.data?.data ?? res.data;
+        setProducts(Array.isArray(list) ? list : []);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load products');
+        const msg = err.response?.data?.message || err.message || 'Failed to load products';
+        const isNetworkError = !err.response && (err.message === 'Network Error' || err.code === 'ECONNREFUSED');
+        setError(isNetworkError
+          ? 'Cannot reach server. Start the backend (npm run dev in backend/) and ensure MongoDB is connected.'
+          : msg
+        );
         setProducts([]);
       } finally {
         setLoading(false);
@@ -40,17 +46,7 @@ const Products = () => {
     fetchProducts();
   }, [category]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(price);
-  };
-
-  const formatCategory = (cat) => {
-    return CATEGORIES.find(c => c.value === cat)?.label || cat;
-  };
+  const getCategoryLabel = (cat) => CATEGORIES.find(c => c.value === cat)?.label || cat;
 
   return (
     <div className="products-page">
@@ -97,46 +93,16 @@ const Products = () => {
             <div className="products-empty">
               <div className="empty-icon">📦</div>
               <h2>No products yet</h2>
-              <p>{category ? `No products in "${formatCategory(category)}".` : 'Be the first to add products.'}</p>
+              <p>{category ? `No products in "${getCategoryLabel(category)}".` : 'Be the first to add products.'}</p>
             </div>
           ) : (
             <div className="products-grid">
               {products.map((product) => (
-                <article key={product._id} className="product-card">
-                  <Link to={`/products/${product._id}`} className="product-card-link">
-                    <div className="product-card-image-wrap">
-                      {product.image ? (
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="product-card-image"
-                        />
-                      ) : (
-                        <div className="product-card-placeholder">
-                          <span className="placeholder-icon">📷</span>
-                          <span>No image</span>
-                        </div>
-                      )}
-                      {product.stock !== undefined && product.stock < 10 && product.stock > 0 && (
-                        <span className="product-badge low-stock">Low stock</span>
-                      )}
-                      {product.stock === 0 && (
-                        <span className="product-badge out-of-stock">Out of stock</span>
-                      )}
-                    </div>
-                    <div className="product-card-body">
-                      <span className="product-card-category">{formatCategory(product.category)}</span>
-                      <h2 className="product-card-title">{product.name}</h2>
-                      {product.description && (
-                        <p className="product-card-desc">{product.description.slice(0, 80)}{product.description.length > 80 ? '…' : ''}</p>
-                      )}
-                      <div className="product-card-footer">
-                        <span className="product-card-price">{formatPrice(product.price)}</span>
-                        <span className="product-card-cta">View details →</span>
-                      </div>
-                    </div>
-                  </Link>
-                </article>
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  getCategoryLabel={getCategoryLabel}
+                />
               ))}
             </div>
           )}
