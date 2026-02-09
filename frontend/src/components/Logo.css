@@ -1,0 +1,90 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #1e293b;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.logo:hover {
+  color: #334155;
+}
+
+.logo:focus-visible {
+  outline: 2px solid #1e293b;
+  outline-offset: 2px;
+}
+
+.logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-icon svg {
+  width: 36px;
+  height: 36px;
+  color: #1e293b;
+}
+
+.logo:hover .logo-icon svg {
+  color: #334155;
+}
+
+.logo-text {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+/* Sizes */
+.logo--small .logo-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.logo--small .logo-text {
+  font-size: 1.05rem;
+}
+
+.logo--small {
+  gap: 8px;
+}
+
+.logo--large .logo-icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.logo--large .logo-text {
+  font-size: 1.75rem;
+}
+
+.logo--large {
+  gap: 14px;
+}
+
+.logo--no-link {
+  cursor: default;
+}
+
+.logo--no-link:hover {
+  opacity: 1;
+}
+
+/* Light variant for dark backgrounds (e.g. hero) */
+.logo--light,
+.logo--light .logo-icon svg {
+  color: #fff;
+}
+
+.logo--light:hover {
+  color: #e2e8f0;
+}
+
+.logo--light:hover .logo-icon svg {
+  color: #e2e8f0;
+}

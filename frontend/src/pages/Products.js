@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import ProductCard from '../components/ProductCard';
@@ -18,12 +19,19 @@ const CATEGORIES = [
 const DEBOUNCE_MS = 400;
 
 const Products = () => {
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [category, setCategory] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  // Sync category from URL (e.g. /products?category=phones)
+  useEffect(() => {
+    const q = searchParams.get('category') || '';
+    setCategory(q);
+  }, [searchParams]);
 
   // Debounce search input
   useEffect(() => {
