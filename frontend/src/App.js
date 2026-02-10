@@ -9,6 +9,7 @@ import ProductDetail from './pages/ProductDetail';
 import HomePage from './pages/Home';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import Cart from './pages/Cart';
 import './App.css';
 
 // Guest Route - redirects to home if already logged in
@@ -42,6 +43,7 @@ function App() {
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/cart" element={<Cart />} />
             <Route path="/" element={<HomePage />} />
           </Routes>
         </Router>

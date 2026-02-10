@@ -52,7 +52,7 @@ const Navbar = () => {
 
           <div className="nav-actions">
             {isAuthenticated() && (
-              <Link to="/products" className="nav-cart-link" aria-label={`Cart, ${cartCount} items`}>
+              <Link to="/cart" className="nav-cart-link" aria-label={`Cart, ${cartCount} items`}>
                 <span className="nav-cart-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
