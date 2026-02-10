@@ -37,11 +37,11 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Create new user
+    // Create new user (trim password so login with trimmed input matches)
     const user = await User.create({
       name: name.trim(),
       email: email.trim().toLowerCase(),
-      password,
+      password: (password || '').trim(),
       role: normalizedRole
     });
 
@@ -106,7 +106,9 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     // Validate input
-    if (!email || !password) {
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const trimmedPassword = (password || '').trim();
+    if (!normalizedEmail || !trimmedPassword) {
       return res.status(400).json({ 
         success: false, 
         message: 'Please provide email and password' 
@@ -114,17 +116,23 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user (email match is case-insensitive, same as register)
-    const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
     if (!user) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Login] No user found for email:', normalizedEmail);
+      }
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid email or password' 
       });
     }
 
-    // Check password
-    const isMatch = await user.comparePassword(password);
+    // Check password (use trimmed to match frontend and registration)
+    const isMatch = await user.comparePassword(trimmedPassword);
     if (!isMatch) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Login] Password mismatch for:', normalizedEmail);
+      }
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid email or password' 
@@ -152,6 +160,43 @@ router.post('/login', async (req, res) => {
       success: false, 
       message: 'Server error during login' 
     });
+  }
+});
+
+// @route   POST /api/auth/dev-set-password
+// @desc    (DEV ONLY) Set a new password for an existing user by email. Use when login fails due to unknown/old password.
+// @access  Public, only when NODE_ENV !== 'production'
+router.post('/dev-set-password', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ success: false, message: 'Not found' });
+  }
+  try {
+    const { email, newPassword } = req.body;
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const trimmedPassword = (newPassword || '').trim();
+    if (!normalizedEmail || trimmedPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide email and newPassword (min 6 characters)'
+      });
+    }
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found for that email'
+      });
+    }
+    user.password = trimmedPassword;
+    await user.save(); // pre('save') hashes the password
+    console.log('[Dev] Password updated for:', normalizedEmail);
+    res.json({
+      success: true,
+      message: 'Password updated. You can now log in with that email and the new password.'
+    });
+  } catch (error) {
+    console.error('POST /api/auth/dev-set-password error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat('en-US', {
@@ -10,7 +11,18 @@ const formatPrice = (price) => {
 };
 
 const ProductCard = ({ product, getCategoryLabel }) => {
+  const { addToCart } = useCart();
+  const [adding, setAdding] = useState(false);
   const categoryLabel = getCategoryLabel ? getCategoryLabel(product.category) : product.category;
+
+  const handleAddToCart = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (adding || (product.stock !== undefined && product.stock < 1)) return;
+    setAdding(true);
+    await addToCart(product._id, 1);
+    setAdding(false);
+  };
 
   return (
     <article className="product-card">
@@ -48,6 +60,16 @@ const ProductCard = ({ product, getCategoryLabel }) => {
             <span className="product-card-price">{formatPrice(product.price)}</span>
             <span className="product-card-cta">View details →</span>
           </div>
+          {product.stock !== undefined && product.stock > 0 && (
+            <button
+              type="button"
+              className="product-card-add"
+              onClick={handleAddToCart}
+              disabled={adding}
+            >
+              {adding ? 'Adding…' : 'Add to Cart'}
+            </button>
+          )}
         </div>
       </Link>
     </article>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import { useCart } from '../context/CartContext';
 import './Products.css';
 
 const CATEGORY_LABELS = {
@@ -16,10 +17,13 @@ const CATEGORY_LABELS = {
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [cartMessage, setCartMessage] = useState('');
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -44,9 +48,13 @@ const ProductDetail = () => {
 
   const formatCategory = (cat) => CATEGORY_LABELS[cat] || cat;
 
-  const handleAddToCart = () => {
-    // Placeholder - cart integration can be added later
-    alert('Add to cart coming soon!');
+  const handleAddToCart = async () => {
+    setCartMessage('');
+    setAdding(true);
+    const result = await addToCart(product._id, quantity);
+    setAdding(false);
+    setCartMessage(result.message || (result.success ? 'Added to cart!' : 'Could not add to cart'));
+    if (result.success) setTimeout(() => setCartMessage(''), 3000);
   };
 
   if (loading) {
@@ -136,9 +144,15 @@ const ProductDetail = () => {
                     type="button"
                     className="btn-add-to-cart"
                     onClick={handleAddToCart}
+                    disabled={adding}
                   >
-                    Add to Cart
+                    {adding ? 'Adding…' : 'Add to Cart'}
                   </button>
+                  {cartMessage && (
+                    <p className={`product-detail-cart-msg ${cartMessage.includes('Failed') || cartMessage.includes('sign in') ? 'error' : 'success'}`}>
+                      {cartMessage}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
