@@ -1,0 +1,121 @@
+.vendor-dashboard-page {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.vendor-dashboard-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.vendor-dashboard-container {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.vendor-dashboard-header {
+  margin-bottom: 24px;
+}
+
+.vendor-dashboard-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.vendor-dashboard-subtitle {
+  font-size: 1rem;
+  color: #64748b;
+}
+
+.vendor-dashboard-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.vendor-tab {
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #64748b;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  margin-bottom: -1px;
+}
+
+.vendor-tab:hover {
+  color: #0f172a;
+}
+
+.vendor-tab.active {
+  color: #0f172a;
+  border-bottom-color: #0f172a;
+}
+
+.vendor-dashboard-content {
+  min-height: 200px;
+}
+
+.vendor-tab-panel {
+  animation: vendor-fade 0.2s ease;
+}
+
+@keyframes vendor-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.vendor-placeholder {
+  text-align: center;
+  padding: 48px 24px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px dashed #e2e8f0;
+}
+
+.vendor-placeholder-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.vendor-placeholder-text {
+  font-size: 1rem;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.vendor-placeholder-note {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.vendor-dashboard-footer {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.vendor-back-link {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #475569;
+  text-decoration: none;
+}
+
+.vendor-back-link:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}

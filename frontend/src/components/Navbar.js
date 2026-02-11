@@ -8,8 +8,9 @@ import './Navbar.css';
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, hasRole } = useAuth();
   const { cartCount } = useCart();
+  const isVendorOrAdmin = isAuthenticated() && hasRole(['vendor', 'admin']);
 
   const handleLogout = () => {
     logout();
@@ -48,6 +49,13 @@ const Navbar = () => {
                 Contact
               </Link>
             </li>
+            {isVendorOrAdmin && (
+              <li className="nav-item">
+                <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
+                  Dashboard
+                </Link>
+              </li>
+            )}
           </ul>
 
           <div className="nav-actions">
