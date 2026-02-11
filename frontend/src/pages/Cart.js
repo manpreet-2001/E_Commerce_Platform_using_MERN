@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
+import CartItem from '../components/CartItem';
 import './Cart.css';
 
 const formatPrice = (price) =>
@@ -79,59 +80,16 @@ const Cart = () => {
             <>
               <div className="cart-list">
                 {cartItems.map((item) => {
-                  const product = item.product;
-                  if (!product) return null;
-                  const productId = product._id;
-                  const qty = item.quantity || 1;
-                  const lineTotal = (product?.price ?? 0) * qty;
-                  const isUpdating = updatingId === productId;
-
+                  const productId = item.product?._id;
+                  if (!productId) return null;
                   return (
-                    <div key={productId} className={`cart-item ${isUpdating ? 'updating' : ''}`}>
-                      <Link to={`/products/${productId}`} className="cart-item-image-wrap">
-                        {product?.image ? (
-                          <img src={product.image} alt={product.name} className="cart-item-image" />
-                        ) : (
-                          <div className="cart-item-placeholder">No image</div>
-                        )}
-                      </Link>
-                      <div className="cart-item-details">
-                        <Link to={`/products/${productId}`} className="cart-item-name">{product?.name}</Link>
-                        <p className="cart-item-price">{formatPrice(product?.price ?? 0)} each</p>
-                        <div className="cart-item-actions">
-                          <div className="cart-item-qty">
-                            <button
-                              type="button"
-                              className="cart-qty-btn"
-                              onClick={() => handleQuantityChange(productId, qty - 1)}
-                              disabled={qty <= 1 || isUpdating}
-                              aria-label="Decrease quantity"
-                            >
-                              −
-                            </button>
-                            <span className="cart-qty-value">{qty}</span>
-                            <button
-                              type="button"
-                              className="cart-qty-btn"
-                              onClick={() => handleQuantityChange(productId, qty + 1)}
-                              disabled={isUpdating}
-                              aria-label="Increase quantity"
-                            >
-                              +
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            className="cart-remove-btn"
-                            onClick={() => handleRemove(productId)}
-                            disabled={isUpdating}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                      <div className="cart-item-total">{formatPrice(lineTotal)}</div>
-                    </div>
+                    <CartItem
+                      key={productId}
+                      item={item}
+                      onQuantityChange={handleQuantityChange}
+                      onRemove={handleRemove}
+                      isUpdating={updatingId === productId}
+                    />
                   );
                 })}
               </div>
