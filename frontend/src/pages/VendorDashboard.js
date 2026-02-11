@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import VendorProductForm from '../components/VendorProductForm';
 import './VendorDashboard.css';
 
 const SIDEBAR_SECTIONS = [
@@ -9,19 +11,87 @@ const SIDEBAR_SECTIONS = [
   { id: 'orders', label: 'My Orders', icon: '🛒' },
 ];
 
+const CATEGORY_LABELS = {
+  electronics: 'Electronics',
+  phones: 'Phones',
+  laptops: 'Laptops',
+  accessories: 'Accessories',
+  audio: 'Audio',
+  gaming: 'Gaming',
+  other: 'Other',
+};
+
 const VendorDashboard = () => {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('products');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState('');
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState('');
+
   const displayName = user?.name || user?.email?.split('@')[0] || 'Vendor';
+
+  const fetchMyProducts = useCallback(async () => {
+    setProductsLoading(true);
+    setProductsError('');
+    try {
+      const res = await axios.get('/api/products/vendor/mine');
+      setProducts(res.data.data || []);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to load your products';
+      setProductsError(msg);
+      setProducts([]);
+    } finally {
+      setProductsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'products') {
+      fetchMyProducts();
+    }
+  }, [activeSection, fetchMyProducts]);
+
+  const openAddForm = () => {
+    setFormError('');
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setFormError('');
+  };
+
+  const handleFormSubmit = async (payload) => {
+    if (payload.imageError) {
+      setFormError(payload.imageError);
+      return;
+    }
+    setFormLoading(true);
+    setFormError('');
+    try {
+      await axios.post('/api/products', payload);
+      await fetchMyProducts();
+      closeForm();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Add failed';
+      setFormError(msg);
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   return (
     <div className="vendor-dashboard-page">
       <Navbar />
 
       <div className="vendor-dashboard-layout">
-        {/* Sidebar */}
         <aside className={`vendor-dashboard-sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="vendor-sidebar-inner">
             <div className="vendor-sidebar-header">
@@ -72,7 +142,6 @@ const VendorDashboard = () => {
           </div>
         </aside>
 
-        {/* Overlay when sidebar open on mobile */}
         <button
           type="button"
           className={`vendor-dashboard-overlay ${sidebarOpen ? 'visible' : ''}`}
@@ -80,7 +149,6 @@ const VendorDashboard = () => {
           aria-label="Close menu"
         />
 
-        {/* Main content */}
         <main className="vendor-dashboard-main">
           <div className="vendor-main-inner">
             <button
@@ -101,10 +169,9 @@ const VendorDashboard = () => {
               </div>
             </header>
 
-            {/* Quick stats (placeholder) */}
             <div className="vendor-stats">
               <div className="vendor-stat-card">
-                <span className="vendor-stat-value">0</span>
+                <span className="vendor-stat-value">{products.length}</span>
                 <span className="vendor-stat-label">Products</span>
               </div>
               <div className="vendor-stat-card">
@@ -115,14 +182,72 @@ const VendorDashboard = () => {
 
             <div className="vendor-dashboard-content">
               {activeSection === 'products' && (
-                <div className="vendor-tab-panel">
-                  <div className="vendor-placeholder">
-                    <p className="vendor-placeholder-title">My Products</p>
-                    <p className="vendor-placeholder-text">
-                      Add, edit, and manage your product listings here.
-                    </p>
-                    <p className="vendor-placeholder-note">(Product management coming soon)</p>
+                <div className="vendor-tab-panel vendor-products-panel">
+                  <div className="vendor-products-header">
+                    <h2 className="vendor-products-heading">Your products</h2>
+                    <button type="button" className="vendor-products-add-btn" onClick={openAddForm}>
+                      + Add Product
+                    </button>
                   </div>
+
+                  {productsError && (
+                    <div className="vendor-products-error">{productsError}</div>
+                  )}
+
+                  {productsLoading ? (
+                    <div className="vendor-products-loading">Loading products…</div>
+                  ) : products.length === 0 ? (
+                    <div className="vendor-placeholder">
+                      <p className="vendor-placeholder-title">No products yet</p>
+                      <p className="vendor-placeholder-text">
+                        Add your first product to start selling.
+                      </p>
+                      <button type="button" className="vendor-placeholder-btn" onClick={openAddForm}>
+                        Add Product
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="vendor-products-list">
+                      {products.map((p) => (
+                        <div key={p._id} className="vendor-product-card">
+                          <div className="vendor-product-card-image">
+                            {p.image ? (
+                              <img src={p.image} alt="" />
+                            ) : (
+                              <span className="vendor-product-card-no-image">No image</span>
+                            )}
+                          </div>
+                          <div className="vendor-product-card-body">
+                            <h3 className="vendor-product-card-name">{p.name}</h3>
+                            <p className="vendor-product-card-meta">
+                              ${Number(p.price).toFixed(2)} · {CATEGORY_LABELS[p.category] || p.category} · Stock: {p.stock}
+                            </p>
+                            {p.description && (
+                              <p className="vendor-product-card-desc">
+                                {p.description.length > 80 ? p.description.slice(0, 80) + '…' : p.description}
+                              </p>
+                            )}
+                            <div className="vendor-product-card-actions">
+                              <button
+                                type="button"
+                                className="vendor-product-card-btn vendor-product-card-btn-edit"
+                                onClick={() => openEditForm(p)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="vendor-product-card-btn vendor-product-card-btn-delete"
+                                onClick={() => handleDelete(p)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -141,6 +266,20 @@ const VendorDashboard = () => {
           </div>
         </main>
       </div>
+
+      {formOpen && (
+        <div className="vendor-modal-backdrop" onClick={closeForm}>
+          <div className="vendor-modal" onClick={(e) => e.stopPropagation()}>
+            <VendorProductForm
+              product={null}
+              onSubmit={handleFormSubmit}
+              onCancel={closeForm}
+              loading={formLoading}
+              error={formError}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

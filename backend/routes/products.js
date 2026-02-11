@@ -50,6 +50,28 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @route   GET /api/products/vendor/mine
+// @desc    Get products for the current vendor (or admin)
+// @access  Private (vendor, admin)
+router.get('/vendor/mine', protect, authorize('vendor', 'admin'), async (req, res) => {
+  try {
+    const products = await Product.find({ vendor: req.user._id })
+      .populate('vendor', 'name email')
+      .sort({ updatedAt: -1 });
+    res.json({
+      success: true,
+      count: products.length,
+      data: products
+    });
+  } catch (error) {
+    console.error('GET /api/products/vendor/mine error:', error.message || error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching your products'
+    });
+  }
+});
+
 // @route   GET /api/products/:id
 // @desc    Get single product by ID
 // @access  Public
