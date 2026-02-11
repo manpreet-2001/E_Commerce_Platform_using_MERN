@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       setUser(newUser);
       
-      return { success: true, message: res.data.message };
+      return { success: true, message: res.data.message, user: newUser };
     } catch (error) {
       const data = error.response?.data;
       const message = data?.message || data?.error
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       setUser(newUser);
       
-      return { success: true, message: res.data.message };
+      return { success: true, message: res.data.message, user: newUser };
     } catch (error) {
       const message = error.response?.data?.message
         || (error.code === 'ERR_NETWORK' || !error.response

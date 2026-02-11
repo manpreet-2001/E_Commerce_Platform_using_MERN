@@ -72,8 +72,9 @@ const Register = () => {
 
     if (result.success) {
       setSuccess('Account created successfully! Redirecting...');
+      const isVendorOrAdmin = result.user && ['vendor', 'admin'].includes(result.user.role);
       setTimeout(() => {
-        navigate('/');
+        navigate(isVendorOrAdmin ? '/dashboard' : '/');
       }, 1500);
     } else {
       setError(result.message);

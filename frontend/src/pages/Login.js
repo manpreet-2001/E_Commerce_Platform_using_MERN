@@ -45,7 +45,8 @@ const Login = () => {
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
       }
-      navigate('/');
+      const isVendorOrAdmin = result.user && ['vendor', 'admin'].includes(result.user.role);
+      navigate(isVendorOrAdmin ? '/dashboard' : '/');
     } else {
       setError(result.message);
     }
