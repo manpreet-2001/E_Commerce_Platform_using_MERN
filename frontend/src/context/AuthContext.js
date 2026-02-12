@@ -6,12 +6,26 @@ const AuthContext = createContext(null);
 // Configure axios base URL: use env var or empty (empty = same origin, proxy in dev)
 axios.defaults.baseURL = process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_URL || '';
 
+// Axios interceptor to always add token from localStorage to requests
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Set axios auth header when token changes
+  // Set axios auth header when token changes (for backwards compatibility)
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
