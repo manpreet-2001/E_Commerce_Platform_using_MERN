@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import Logo from '../components/Logo';
 import './Home.css';
 
 const HERO_SLIDES = [
@@ -38,8 +36,6 @@ const HERO_SLIDES = [
 const SLIDE_INTERVAL_MS = 5000;
 
 const HomePage = () => {
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
   const [heroIndex, setHeroIndex] = useState(0);
 
   useEffect(() => {
@@ -52,11 +48,6 @@ const HomePage = () => {
   const goToSlide = (index) => setHeroIndex(index);
   const next = () => setHeroIndex((i) => (i + 1) % HERO_SLIDES.length);
   const prev = () => setHeroIndex((i) => (i - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   const features = [
     { iconKey: 'shipping', title: 'Free Shipping', text: 'On orders over $50' },

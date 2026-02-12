@@ -13,8 +13,12 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Middleware – allow frontend origin in production (set FRONTEND_URL when you deploy)
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || true,
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
