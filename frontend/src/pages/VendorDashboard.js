@@ -59,12 +59,20 @@ const VendorDashboard = () => {
   }, [activeSection, fetchMyProducts]);
 
   const openAddForm = () => {
+    setEditingProduct(null);
+    setFormError('');
+    setFormOpen(true);
+  };
+
+  const openEditForm = (product) => {
+    setEditingProduct(product);
     setFormError('');
     setFormOpen(true);
   };
 
   const closeForm = () => {
     setFormOpen(false);
+    setEditingProduct(null);
     setFormError('');
   };
 
@@ -76,14 +84,30 @@ const VendorDashboard = () => {
     setFormLoading(true);
     setFormError('');
     try {
-      await axios.post('/api/products', payload);
+      if (editingProduct?._id) {
+        await axios.put(`/api/products/${editingProduct._id}`, payload);
+      } else {
+        await axios.post('/api/products', payload);
+      }
       await fetchMyProducts();
       closeForm();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Add failed';
+      const msg = err.response?.data?.message || (editingProduct?._id ? 'Update failed' : 'Add failed');
       setFormError(msg);
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleDelete = async (product) => {
+    if (!product?._id) return;
+    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    try {
+      await axios.delete(`/api/products/${product._id}`);
+      await fetchMyProducts();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Delete failed';
+      alert(msg);
     }
   };
 
@@ -271,7 +295,7 @@ const VendorDashboard = () => {
         <div className="vendor-modal-backdrop" onClick={closeForm}>
           <div className="vendor-modal" onClick={(e) => e.stopPropagation()}>
             <VendorProductForm
-              product={null}
+              product={editingProduct}
               onSubmit={handleFormSubmit}
               onCancel={closeForm}
               loading={formLoading}
