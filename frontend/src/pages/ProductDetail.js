@@ -100,13 +100,21 @@ const ProductDetail = () => {
           <div className="product-detail">
             <div className="product-detail-image-wrap">
               {product.image ? (
-                <img src={getImageUrl(product.image)} alt={product.name} className="product-detail-image" />
-              ) : (
-                <div className="product-card-placeholder" style={{ minHeight: 320 }}>
-                  <span className="placeholder-icon">📷</span>
-                  <span>No image</span>
-                </div>
-              )}
+                <img 
+                  src={getImageUrl(product.image)} 
+                  alt={product.name} 
+                  className="product-detail-image"
+                  onError={(e) => {
+                    console.error('Image failed to load:', getImageUrl(product.image));
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className="product-card-placeholder" style={{ minHeight: 320, display: product.image ? 'none' : 'flex' }}>
+                <span className="placeholder-icon">📷</span>
+                <span>No image</span>
+              </div>
             </div>
             <div className="product-detail-info">
               <span className="product-detail-category">{formatCategory(product.category)}</span>

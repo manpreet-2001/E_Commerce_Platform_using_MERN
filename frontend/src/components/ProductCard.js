@@ -30,11 +30,23 @@ const ProductCard = ({ product, getCategoryLabel }) => {
       <Link to={`/products/${product._id}`} className="product-card-link">
         <div className="product-card-image-wrap">
           {product.image ? (
-            <img
-              src={getImageUrl(product.image)}
-              alt={product.name}
-              className="product-card-image"
-            />
+            <>
+              <img
+                src={getImageUrl(product.image)}
+                alt={product.name}
+                className="product-card-image"
+                onError={(e) => {
+                  console.error('Image failed to load:', getImageUrl(product.image));
+                  e.target.style.display = 'none';
+                  const placeholder = e.target.parentElement.querySelector('.product-card-placeholder');
+                  if (placeholder) placeholder.style.display = 'flex';
+                }}
+              />
+              <div className="product-card-placeholder" style={{ display: 'none' }}>
+                <span className="placeholder-icon">📷</span>
+                <span>No image</span>
+              </div>
+            </>
           ) : (
             <div className="product-card-placeholder">
               <span className="placeholder-icon">📷</span>
