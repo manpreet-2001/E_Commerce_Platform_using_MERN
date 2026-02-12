@@ -36,8 +36,10 @@ router.post('/', protect, authorize('vendor', 'admin'), (req, res) => {
       });
     }
 
-    // Return URL path for use in product image field
-    const imageUrl = `/uploads/${req.file.filename}`;
+    // Return full URL in production, relative path in development
+    // Use BACKEND_URL env var if set (for Render), otherwise construct from request
+    const baseUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+    const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
     res.status(201).json({
       success: true,

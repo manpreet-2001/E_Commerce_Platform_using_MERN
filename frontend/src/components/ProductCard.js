@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { getImageUrl } from '../utils/imageUrl';
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat('en-US', {
@@ -30,7 +31,7 @@ const ProductCard = ({ product, getCategoryLabel }) => {
         <div className="product-card-image-wrap">
           {product.image ? (
             <img
-              src={product.image}
+              src={getImageUrl(product.image)}
               alt={product.name}
               className="product-card-image"
             />

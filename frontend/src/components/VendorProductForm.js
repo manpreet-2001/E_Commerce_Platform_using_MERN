@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { getImageUrl } from '../utils/imageUrl';
 import './VendorProductForm.css';
 
 const CATEGORIES = [
@@ -215,7 +216,7 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
         {displayPreview && (
           <div className="vendor-product-form-preview-wrap">
             <img
-              src={displayPreview}
+              src={getImageUrl(displayPreview)}
               alt="Preview"
               className="vendor-product-form-preview"
             />

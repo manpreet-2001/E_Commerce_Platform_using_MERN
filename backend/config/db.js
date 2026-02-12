@@ -12,7 +12,8 @@ const connectDB = async () => {
     console.error('❌ MONGODB_URI is not set in environment variables!');
     console.error('   → In Render: Go to your service → Environment → Add MONGODB_URI');
     console.error('   → Key: MONGODB_URI');
-    console.error('   → Value: mongodb+srv://manpreet123singh987_db_user:vdwvlaRh829Yt9cT@cluster0.bh3sbvy.mongodb.net/citytechstore?retryWrites=true&w=majority&appName=Cluster0');
+    console.error('   → Value: Your MongoDB Atlas connection string (mongodb+srv://...)');
+    console.error('   → Get it from: MongoDB Atlas → Connect → Connect your application');
     console.error('   → Make sure there are NO spaces around the = sign');
     console.error('   → Variable name is case-sensitive: MONGODB_URI (all caps)');
     process.exit(1);

@@ -4,6 +4,7 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import VendorProductForm from '../components/VendorProductForm';
+import { getImageUrl } from '../utils/imageUrl';
 import './VendorDashboard.css';
 
 const SIDEBAR_SECTIONS = [
@@ -236,7 +237,7 @@ const VendorDashboard = () => {
                         <div key={p._id} className="vendor-product-card">
                           <div className="vendor-product-card-image">
                             {p.image ? (
-                              <img src={p.image} alt="" />
+                              <img src={getImageUrl(p.image)} alt="" />
                             ) : (
                               <span className="vendor-product-card-no-image">No image</span>
                             )}

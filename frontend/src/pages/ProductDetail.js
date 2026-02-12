@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import { useCart } from '../context/CartContext';
+import { getImageUrl } from '../utils/imageUrl';
 import './Products.css';
 
 const CATEGORY_LABELS = {
@@ -99,7 +100,7 @@ const ProductDetail = () => {
           <div className="product-detail">
             <div className="product-detail-image-wrap">
               {product.image ? (
-                <img src={product.image} alt={product.name} className="product-detail-image" />
+                <img src={getImageUrl(product.image)} alt={product.name} className="product-detail-image" />
               ) : (
                 <div className="product-card-placeholder" style={{ minHeight: 320 }}>
                   <span className="placeholder-icon">📷</span>
