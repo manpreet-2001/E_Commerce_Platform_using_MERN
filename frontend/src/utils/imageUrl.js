@@ -1,7 +1,7 @@
 /**
  * Converts relative image URLs to absolute URLs for production
  * @param {string} imageUrl - The image URL from the backend (can be relative or absolute)
- * @returns {string} - Absolute URL for the image
+ * @returns {string|null} - Absolute URL for the image, or null if invalid
  */
 export const getImageUrl = (imageUrl) => {
   if (!imageUrl || typeof imageUrl !== 'string' || imageUrl.trim() === '') {
@@ -17,18 +17,26 @@ export const getImageUrl = (imageUrl) => {
   
   // If relative path (starts with /), prepend backend URL
   if (trimmedUrl.startsWith('/')) {
-    const backendUrl = process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_URL || '';
+    let backendUrl = process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_URL || '';
     
-    // If no backend URL is set, log warning (but still return relative for dev)
-    if (!backendUrl && process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ REACT_APP_API_BASE not set - images may not load in production');
+    // If no backend URL is set, log detailed error
+    if (!backendUrl) {
+      console.error('❌ REACT_APP_API_BASE environment variable is not set!');
+      console.error('   Image URL:', trimmedUrl);
+      console.error('   This will cause images to fail loading in production.');
+      console.error('   Solution: Set REACT_APP_API_BASE in your deployment platform:');
+      console.error('   - Render: Go to your frontend service → Environment → Add REACT_APP_API_BASE');
+      console.error('   - Value should be your backend URL, e.g., https://your-backend.onrender.com');
+      // Still return the relative URL - browser might handle it if same origin
+      // But it will likely fail and trigger onError handler
+      return trimmedUrl;
     }
     
     // Remove trailing slash from backend URL if present
     const baseUrl = backendUrl.replace(/\/$/, '');
     const fullUrl = baseUrl + trimmedUrl;
     
-    // Debug in development
+    // Debug logging
     if (process.env.NODE_ENV === 'development') {
       console.log('Image URL conversion:', { original: trimmedUrl, backendUrl, fullUrl });
     }
@@ -36,6 +44,6 @@ export const getImageUrl = (imageUrl) => {
     return fullUrl;
   }
   
-  // Return as-is if it's neither absolute nor relative
+  // Return as-is if it's neither absolute nor relative (might be a data URL or other format)
   return trimmedUrl;
 };

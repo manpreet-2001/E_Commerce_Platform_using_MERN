@@ -105,9 +105,18 @@ const ProductDetail = () => {
                   alt={product.name} 
                   className="product-detail-image"
                   onError={(e) => {
-                    console.error('Image failed to load:', getImageUrl(product.image));
+                    const imageUrl = getImageUrl(product.image);
+                    console.error('❌ Image failed to load:', {
+                      original: product.image,
+                      converted: imageUrl,
+                      productId: product._id,
+                      productName: product.name
+                    });
+                    console.error('   Check browser Network tab to see the failed request');
+                    console.error('   Ensure REACT_APP_API_BASE is set in your deployment environment variables');
                     e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
+                    const placeholder = e.target.nextSibling;
+                    if (placeholder) placeholder.style.display = 'flex';
                   }}
                 />
               ) : null}

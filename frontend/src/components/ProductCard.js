@@ -36,7 +36,14 @@ const ProductCard = ({ product, getCategoryLabel }) => {
                 alt={product.name}
                 className="product-card-image"
                 onError={(e) => {
-                  console.error('Image failed to load:', getImageUrl(product.image));
+                  const imageUrl = getImageUrl(product.image);
+                  console.error('❌ Image failed to load:', {
+                    original: product.image,
+                    converted: imageUrl,
+                    productId: product._id,
+                    productName: product.name
+                  });
+                  console.error('   Ensure REACT_APP_API_BASE is set in your deployment environment variables');
                   e.target.style.display = 'none';
                   const placeholder = e.target.parentElement.querySelector('.product-card-placeholder');
                   if (placeholder) placeholder.style.display = 'flex';
