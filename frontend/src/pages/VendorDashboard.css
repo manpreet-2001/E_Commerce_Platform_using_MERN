@@ -463,6 +463,121 @@
   background: #fecaca;
 }
 
+/* Vendor orders panel */
+.vendor-orders-panel {
+  padding: 0;
+}
+
+.vendor-orders-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 16px 0;
+}
+
+.vendor-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vendor-order-card {
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.vendor-order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.vendor-order-id {
+  font-weight: 600;
+  color: #0f172a;
+  display: block;
+}
+
+.vendor-order-customer {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.vendor-order-status {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.vendor-order-status-pending { background: #fef3c7; color: #92400e; }
+.vendor-order-status-confirmed { background: #dbeafe; color: #1e40af; }
+.vendor-order-status-shipped { background: #e0e7ff; color: #3730a3; }
+.vendor-order-status-delivered { background: #d1fae5; color: #065f46; }
+.vendor-order-status-cancelled { background: #fee2e2; color: #991b1b; }
+
+.vendor-order-date {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  margin: 0 0 12px 0;
+}
+
+.vendor-order-items {
+  list-style: none;
+  margin: 0 0 12px 0;
+  padding: 0;
+  font-size: 0.9375rem;
+  color: #334155;
+}
+
+.vendor-order-item {
+  padding: 4px 0;
+}
+
+.vendor-order-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.vendor-order-subtotal {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.vendor-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vendor-order-status-label {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.vendor-order-status-select {
+  padding: 6px 10px;
+  font-size: 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.vendor-order-updating {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
 /* Modal */
 .vendor-modal-backdrop {
   position: fixed;

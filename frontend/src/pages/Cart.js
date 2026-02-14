@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
@@ -12,9 +13,10 @@ const formatPrice = (price) =>
 const Cart = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { cartItems, cartLoading, cartError, cartTotal, updateQuantity, removeFromCart, clearCart } = useCart();
+  const { cartItems, cartLoading, cartError, cartTotal, updateQuantity, removeFromCart, clearCart, fetchCart } = useCart();
   const [updatingId, setUpdatingId] = useState(null);
   const [message, setMessage] = useState('');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   if (authLoading) {
     return (
@@ -51,6 +53,22 @@ const Cart = () => {
     if (!window.confirm('Remove all items from your cart?')) return;
     setMessage('');
     await clearCart();
+  };
+
+  const handleCheckout = async () => {
+    setMessage('');
+    setCheckoutLoading(true);
+    try {
+      await axios.post('/api/orders', { shippingAddress: {} });
+      await clearCart();
+      navigate('/orders', { replace: true });
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Checkout failed';
+      setMessage(msg);
+      if (err.response?.status !== 401) fetchCart();
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   return (
@@ -103,8 +121,13 @@ const Cart = () => {
                   <span className="cart-summary-total">{formatPrice(cartTotal)}</span>
                 </div>
                 <Link to="/products" className="cart-cta cart-cta-secondary">Continue shopping</Link>
-                <button type="button" className="cart-cta cart-cta-primary" disabled>
-                  Checkout (coming soon)
+                <button
+                  type="button"
+                  className="cart-cta cart-cta-primary"
+                  onClick={handleCheckout}
+                  disabled={checkoutLoading}
+                >
+                  {checkoutLoading ? 'Placing order…' : 'Place order'}
                 </button>
               </div>
             </>

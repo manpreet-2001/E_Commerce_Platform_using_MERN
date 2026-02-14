@@ -6,7 +6,7 @@ const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const uploadRoutes = require('./routes/upload');
 const cartRoutes = require('./routes/cart');
-// const orderRoutes = require('./routes/orders');
+const orderRoutes = require('./routes/orders');
 
 /**
  * Register all API routes on the Express app
@@ -17,7 +17,7 @@ function registerRoutes(app) {
   app.use('/api/products', productRoutes);
   app.use('/api/upload', uploadRoutes);
   app.use('/api/cart', cartRoutes);
-  // app.use('/api/orders', orderRoutes);
+  app.use('/api/orders', orderRoutes);
 }
 
 module.exports = registerRoutes;

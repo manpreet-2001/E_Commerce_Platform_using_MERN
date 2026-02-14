@@ -31,6 +31,11 @@ const VendorDashboard = () => {
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState('');
 
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState('');
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -53,11 +58,28 @@ const VendorDashboard = () => {
     }
   }, []);
 
+  const fetchVendorOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    setOrdersError('');
+    try {
+      const res = await axios.get('/api/orders/vendor/mine');
+      setOrders(res.data.data || []);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to load orders';
+      setOrdersError(msg);
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeSection === 'products') {
       fetchMyProducts();
+    } else if (activeSection === 'orders') {
+      fetchVendorOrders();
     }
-  }, [activeSection, fetchMyProducts]);
+  }, [activeSection, fetchMyProducts, fetchVendorOrders]);
 
   const openAddForm = () => {
     setEditingProduct(null);
@@ -111,6 +133,29 @@ const VendorDashboard = () => {
       alert(msg);
     }
   };
+
+  const handleOrderStatusChange = async (orderId, newStatus) => {
+    setUpdatingOrderId(orderId);
+    try {
+      await axios.patch(`/api/orders/${orderId}/status`, { status: newStatus });
+      await fetchVendorOrders();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update status';
+      alert(msg);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const formatPrice = (price) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price);
+  const ORDER_STATUSES = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'shipped', label: 'Shipped' },
+    { value: 'delivered', label: 'Delivered' },
+    { value: 'cancelled', label: 'Cancelled' }
+  ];
 
   return (
     <div className="vendor-dashboard-page">
@@ -200,7 +245,7 @@ const VendorDashboard = () => {
                 <span className="vendor-stat-label">Products</span>
               </div>
               <div className="vendor-stat-card">
-                <span className="vendor-stat-value">0</span>
+                <span className="vendor-stat-value">{orders.length}</span>
                 <span className="vendor-stat-label">Orders</span>
               </div>
             </div>
@@ -277,14 +322,65 @@ const VendorDashboard = () => {
               )}
 
               {activeSection === 'orders' && (
-                <div className="vendor-tab-panel">
-                  <div className="vendor-placeholder">
-                    <p className="vendor-placeholder-title">My Orders</p>
-                    <p className="vendor-placeholder-text">
-                      View and update orders that include your products.
-                    </p>
-                    <p className="vendor-placeholder-note">(Order management coming soon)</p>
-                  </div>
+                <div className="vendor-tab-panel vendor-orders-panel">
+                  <h2 className="vendor-orders-heading">Orders containing your products</h2>
+                  {ordersError && <div className="vendor-products-error">{ordersError}</div>}
+                  {ordersLoading ? (
+                    <div className="vendor-products-loading">Loading orders…</div>
+                  ) : orders.length === 0 ? (
+                    <div className="vendor-placeholder">
+                      <p className="vendor-placeholder-title">No orders yet</p>
+                      <p className="vendor-placeholder-text">
+                        When customers buy your products, orders will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="vendor-orders-list">
+                      {orders.map((order) => (
+                        <div key={order._id} className="vendor-order-card">
+                          <div className="vendor-order-card-header">
+                            <div>
+                              <span className="vendor-order-id">Order #{order._id.slice(-6).toUpperCase()}</span>
+                              <span className="vendor-order-customer">
+                                {order.user?.name || order.user?.email || 'Customer'}
+                              </span>
+                            </div>
+                            <span className={`vendor-order-status vendor-order-status-${order.status}`}>
+                              {order.status}
+                            </span>
+                          </div>
+                          <p className="vendor-order-date">
+                            {order.createdAt ? new Date(order.createdAt).toLocaleString() : ''}
+                          </p>
+                          <ul className="vendor-order-items">
+                            {order.items?.map((item, idx) => (
+                              <li key={idx} className="vendor-order-item">
+                                {item.product?.name} × {item.quantity} @ {formatPrice(item.price)} = {formatPrice((item.price || 0) * (item.quantity || 0))}
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="vendor-order-footer">
+                            <span className="vendor-order-subtotal">Your total: {formatPrice(order.vendorSubtotal || 0)}</span>
+                            <div className="vendor-order-actions">
+                              <label htmlFor={`status-${order._id}`} className="vendor-order-status-label">Status:</label>
+                              <select
+                                id={`status-${order._id}`}
+                                className="vendor-order-status-select"
+                                value={order.status}
+                                onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
+                                disabled={updatingOrderId === order._id}
+                              >
+                                {ORDER_STATUSES.map((s) => (
+                                  <option key={s.value} value={s.value}>{s.label}</option>
+                                ))}
+                              </select>
+                              {updatingOrderId === order._id && <span className="vendor-order-updating">Updating…</span>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
