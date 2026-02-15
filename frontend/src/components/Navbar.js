@@ -56,6 +56,13 @@ const Navbar = () => {
                 </Link>
               </li>
             )}
+            {isAuthenticated() && (
+              <li className="nav-item">
+                <Link to="/orders" className={`nav-link ${location.pathname === '/orders' ? 'active' : ''}`}>
+                  My Orders
+                </Link>
+              </li>
+            )}
           </ul>
 
           <div className="nav-actions">

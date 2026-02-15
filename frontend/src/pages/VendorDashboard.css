@@ -275,11 +275,12 @@
 
 .vendor-placeholder {
   text-align: center;
-  padding: 56px 24px;
-  background: #f8fafc;
-  border: 1px dashed #e2e8f0;
-  margin: 16px;
-  border-radius: 10px;
+  padding: 48px 24px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  margin: 0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .vendor-placeholder-title {
@@ -465,7 +466,7 @@
 
 /* Vendor orders panel */
 .vendor-orders-panel {
-  padding: 0;
+  padding: 20px;
 }
 
 .vendor-orders-heading {

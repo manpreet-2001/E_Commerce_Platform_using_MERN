@@ -13,6 +13,7 @@ import Contact from './pages/Contact';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
 import VendorDashboard from './pages/VendorDashboard';
+import NotFound from './pages/NotFound';
 import './App.css';
 
 // Guest Route - redirects to home if already logged in
@@ -54,6 +55,7 @@ function App() {
               </VendorRoute>
             } />
             <Route path="/" element={<HomePage />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
       </CartProvider>
