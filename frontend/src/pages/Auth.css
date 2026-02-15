@@ -93,6 +93,10 @@
   color: #374151;
 }
 
+.required-asterisk {
+  color: #dc2626;
+}
+
 .input-wrapper {
   position: relative;
   display: flex;
@@ -188,6 +192,86 @@
 .password-toggle:focus {
   outline: none;
   background: #e5e7eb;
+}
+
+/* Password strength rules */
+.password-rules {
+  list-style: none;
+  margin: 8px 0 0 0;
+  padding: 0;
+  font-size: 0.8125rem;
+}
+
+.password-rules li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.password-rule-icon {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.password-rule-pass {
+  color: #16a34a;
+}
+
+.password-rule-fail {
+  color: #6b7280;
+}
+
+.password-rule-fail .password-rule-icon {
+  color: #9ca3af;
+}
+
+.password-rule-pass .password-rule-icon {
+  color: #16a34a;
+}
+
+.field-error {
+  margin: 6px 0 0 0;
+  font-size: 0.8125rem;
+  color: #dc2626;
+}
+
+.field-hint {
+  margin: 6px 0 0 0;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.field-success {
+  margin: 6px 0 0 0;
+  font-size: 0.8125rem;
+  color: #16a34a;
+}
+
+.input-error {
+  border-color: #dc2626 !important;
+}
+
+.input-error:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+/* When input inside has-prefix wrapper has error, style the wrapper */
+.input-wrapper.has-prefix:has(.input-error) {
+  border-color: #dc2626;
+}
+
+.terms-label-error {
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fef2f2;
+}
+
+.terms-label-error span {
+  color: #991b1b;
 }
 
 .form-group input,

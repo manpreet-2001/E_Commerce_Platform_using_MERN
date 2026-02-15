@@ -4,6 +4,46 @@ const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const { protect } = require('../middleware/auth');
 
+const PASSWORD_RULES = [
+  { test: (p) => p.length >= 8, message: 'At least 8 characters' },
+  { test: (p) => /[A-Z]/.test(p), message: 'One uppercase letter' },
+  { test: (p) => /[a-z]/.test(p), message: 'One lowercase letter' },
+  { test: (p) => /\d/.test(p), message: 'One number' },
+  { test: (p) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p), message: 'One special character (!@#$%^&* etc.)' },
+];
+
+function validatePasswordStrength(password) {
+  const p = (password || '').trim();
+  const failed = PASSWORD_RULES.filter((r) => !r.test(p)).map((r) => r.message);
+  return failed.length === 0 ? null : failed;
+}
+
+// @route   GET /api/auth/check-email
+// @desc    Check if email is available (not already registered)
+// @access  Public
+// @query   email - email to check
+router.get('/check-email', async (req, res) => {
+  try {
+    const raw = (req.query.email || '').trim().toLowerCase();
+    if (!raw) {
+      return res.json({ success: true, available: false, message: 'Please enter an email address' });
+    }
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!emailRegex.test(raw)) {
+      return res.json({ success: true, available: false, message: 'Please enter a valid email address' });
+    }
+    const existing = await User.findOne({ email: raw }).select('_id').lean();
+    return res.json({
+      success: true,
+      available: !existing,
+      message: existing ? 'This email is already registered' : 'Email is available'
+    });
+  } catch (error) {
+    console.error('GET /api/auth/check-email error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Unable to check email' });
+  }
+});
+
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
@@ -16,6 +56,15 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Please provide name, email and password'
+      });
+    }
+
+    const trimmedPassword = (password || '').trim();
+    const passwordErrors = validatePasswordStrength(trimmedPassword);
+    if (passwordErrors) {
+      return res.status(400).json({
+        success: false,
+        message: `Password must have: ${passwordErrors.join('; ')}`
       });
     }
 
@@ -41,7 +90,7 @@ router.post('/register', async (req, res) => {
     const user = await User.create({
       name: name.trim(),
       email: email.trim().toLowerCase(),
-      password: (password || '').trim(),
+      password: trimmedPassword,
       role: normalizedRole
     });
 
@@ -174,10 +223,17 @@ router.post('/dev-set-password', async (req, res) => {
     const { email, newPassword } = req.body;
     const normalizedEmail = (email || '').trim().toLowerCase();
     const trimmedPassword = (newPassword || '').trim();
-    if (!normalizedEmail || trimmedPassword.length < 6) {
+    if (!normalizedEmail || !trimmedPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Provide email and newPassword (min 6 characters)'
+        message: 'Provide email and newPassword'
+      });
+    }
+    const passwordErrors = validatePasswordStrength(trimmedPassword);
+    if (passwordErrors) {
+      return res.status(400).json({
+        success: false,
+        message: `Password must have: ${passwordErrors.join('; ')}`
       });
     }
     const user = await User.findOne({ email: normalizedEmail });

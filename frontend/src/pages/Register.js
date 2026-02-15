@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import { getPasswordRuleResults, isPasswordStrong, getPasswordErrorMessage } from '../utils/passwordStrength';
 import './Auth.css';
 
 const Register = () => {
@@ -19,12 +21,42 @@ const Register = () => {
     agreeTerms: false
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(''); // only for API / generic errors
+  const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailCheckStatus, setEmailCheckStatus] = useState('idle'); // 'idle' | 'checking' | 'taken' | 'available'
+  const [emailCheckMessage, setEmailCheckMessage] = useState('');
 
   const { firstName, lastName, email, phone, role, password, confirmPassword, agreeTerms } = formData;
+
+  const passwordRuleResults = useMemo(() => getPasswordRuleResults(password), [password]);
+  const confirmMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+  const emailTaken = emailCheckStatus === 'taken';
+
+  const getPhoneDigits = (value) => (value || '').replace(/\D/g, '');
+  const isPhoneValid = (value) => getPhoneDigits(value).length === 10;
+  const phoneInvalid = phone.length > 0 && !isPhoneValid(phone);
+
+  const checkEmailAvailability = useCallback(async (emailValue) => {
+    const trimmed = (emailValue || '').trim().toLowerCase();
+    if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
+      setEmailCheckStatus('idle');
+      setEmailCheckMessage('');
+      return;
+    }
+    setEmailCheckStatus('checking');
+    setEmailCheckMessage('');
+    try {
+      const res = await axios.get('/api/auth/check-email', { params: { email: trimmed } });
+      setEmailCheckStatus(res.data.available ? 'available' : 'taken');
+      setEmailCheckMessage(res.data.message || '');
+    } catch {
+      setEmailCheckStatus('idle');
+      setEmailCheckMessage('');
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -33,31 +65,36 @@ const Register = () => {
       [name]: type === 'checkbox' ? checked : value
     });
     setError('');
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+    if (name === 'email') setEmailCheckStatus('idle');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setFieldErrors({});
 
-    // Validation
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      setError('Please fill in all required fields');
-      return;
-    }
+    const err = {};
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+    if (!firstName.trim()) err.firstName = 'First name is required';
+    if (!lastName.trim()) err.lastName = 'Last name is required';
+    if (!email.trim()) err.email = 'Email is required';
+    else if (emailTaken) err.email = emailCheckMessage || 'This email is already registered';
+    if (!phone.trim()) err.phone = 'Phone number is required';
+    else if (!isPhoneValid(phone)) err.phone = 'Phone number must be exactly 10 digits';
+    if (!password) err.password = 'Password is required';
+    else if (!isPasswordStrong(password)) err.password = getPasswordErrorMessage(password) || 'Password does not meet requirements';
+    if (!confirmPassword) err.confirmPassword = 'Please confirm your password';
+    else if (password !== confirmPassword) err.confirmPassword = 'Passwords do not match';
+    if (!agreeTerms) err.agreeTerms = 'You must agree to the Terms of Service';
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (!agreeTerms) {
-      setError('You must agree to the Terms of Service');
+    if (Object.keys(err).length > 0) {
+      setFieldErrors(err);
       return;
     }
 
@@ -79,9 +116,14 @@ const Register = () => {
         navigate('/login');
       }, 2000);
     } else {
-      setError(result.message);
+      const msg = result.message || '';
+      if (msg.toLowerCase().includes('email')) {
+        setFieldErrors({ email: msg });
+      } else {
+        setError(msg);
+      }
     }
-    
+
     setLoading(false);
   };
 
@@ -116,8 +158,10 @@ const Register = () => {
                     value={firstName}
                     onChange={handleChange}
                     placeholder="First name"
+                    className={fieldErrors.firstName ? 'input-error' : ''}
                   />
                 </div>
+                {fieldErrors.firstName && <p className="field-error">{fieldErrors.firstName}</p>}
               </div>
               <div className="form-group">
                 <label htmlFor="lastName">Last Name</label>
@@ -129,8 +173,10 @@ const Register = () => {
                     value={lastName}
                     onChange={handleChange}
                     placeholder="Last name"
+                    className={fieldErrors.lastName ? 'input-error' : ''}
                   />
                 </div>
+                {fieldErrors.lastName && <p className="field-error">{fieldErrors.lastName}</p>}
               </div>
             </div>
 
@@ -144,13 +190,22 @@ const Register = () => {
                   name="email"
                   value={email}
                   onChange={handleChange}
+                  onBlur={() => checkEmailAvailability(email)}
                   placeholder="Enter your email"
+                  className={fieldErrors.email || emailTaken ? 'input-error' : ''}
                 />
               </div>
+              {emailCheckStatus === 'checking' && <p className="field-hint">Checking email…</p>}
+              {(fieldErrors.email || (emailCheckStatus === 'taken' && !fieldErrors.email)) && (
+                <p className="field-error">{fieldErrors.email || emailCheckMessage || 'This email is already registered.'}</p>
+              )}
+              {emailCheckStatus === 'available' && !fieldErrors.email && (
+                <p className="field-success">Email is available.</p>
+              )}
             </div>
 
             <div className="form-group">
-              <label htmlFor="phone">Phone Number</label>
+              <label htmlFor="phone">Phone Number <span className="required-asterisk">*</span></label>
               <div className="input-wrapper has-prefix">
                 <span className="input-icon input-icon-phone" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -165,8 +220,13 @@ const Register = () => {
                   value={phone}
                   onChange={handleChange}
                   placeholder="(555) 123-4567"
+                  className={fieldErrors.phone || phoneInvalid ? 'input-error' : ''}
+                  maxLength={14}
                 />
               </div>
+              {(fieldErrors.phone || phoneInvalid) && (
+                <p className="field-error">{fieldErrors.phone || 'Phone number must be exactly 10 digits'}</p>
+              )}
             </div>
 
             <div className="form-group">
@@ -193,6 +253,7 @@ const Register = () => {
                   value={password}
                   onChange={handleChange}
                   placeholder="Create a strong password"
+                  className={fieldErrors.password || (password.length > 0 && !isPasswordStrong(password)) ? 'input-error' : ''}
                 />
                 <button
                   type="button"
@@ -204,6 +265,15 @@ const Register = () => {
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
+              {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
+              <ul className="password-rules" aria-label="Password requirements">
+                {passwordRuleResults.map((r) => (
+                  <li key={r.id} className={r.pass ? 'password-rule-pass' : 'password-rule-fail'}>
+                    <span className="password-rule-icon" aria-hidden>{r.pass ? '✓' : '○'}</span>
+                    {r.label}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <div className="form-group">
@@ -217,6 +287,7 @@ const Register = () => {
                   value={confirmPassword}
                   onChange={handleChange}
                   placeholder="Confirm your password"
+                  className={fieldErrors.confirmPassword || confirmMismatch ? 'input-error' : ''}
                 />
                 <button
                   type="button"
@@ -228,9 +299,12 @@ const Register = () => {
                   {showConfirmPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
+              {(fieldErrors.confirmPassword || confirmMismatch) && (
+                <p className="field-error">{fieldErrors.confirmPassword || 'Passwords do not match'}</p>
+              )}
             </div>
 
-            <label className="terms-label">
+            <label className={`terms-label ${fieldErrors.agreeTerms ? 'terms-label-error' : ''}`}>
               <input
                 type="checkbox"
                 name="agreeTerms"
@@ -241,6 +315,7 @@ const Register = () => {
                 I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>
               </span>
             </label>
+            {fieldErrors.agreeTerms && <p className="field-error">{fieldErrors.agreeTerms}</p>}
 
             <button
               type="submit"
