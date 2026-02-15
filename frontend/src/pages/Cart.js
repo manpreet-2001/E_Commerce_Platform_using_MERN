@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
@@ -13,10 +12,9 @@ const formatPrice = (price) =>
 const Cart = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { cartItems, cartLoading, cartError, cartTotal, updateQuantity, removeFromCart, clearCart, fetchCart } = useCart();
+  const { cartItems, cartLoading, cartError, cartTotal, updateQuantity, removeFromCart, clearCart } = useCart();
   const [updatingId, setUpdatingId] = useState(null);
   const [message, setMessage] = useState('');
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   if (authLoading) {
     return (
@@ -55,20 +53,8 @@ const Cart = () => {
     await clearCart();
   };
 
-  const handleCheckout = async () => {
-    setMessage('');
-    setCheckoutLoading(true);
-    try {
-      await axios.post('/api/orders', { shippingAddress: {} });
-      await clearCart();
-      navigate('/orders', { replace: true });
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Checkout failed';
-      setMessage(msg);
-      if (err.response?.status !== 401) fetchCart();
-    } finally {
-      setCheckoutLoading(false);
-    }
+  const handleProceedToCheckout = () => {
+    navigate('/checkout');
   };
 
   return (
@@ -124,10 +110,9 @@ const Cart = () => {
                 <button
                   type="button"
                   className="cart-cta cart-cta-primary"
-                  onClick={handleCheckout}
-                  disabled={checkoutLoading}
+                  onClick={handleProceedToCheckout}
                 >
-                  {checkoutLoading ? 'Placing order…' : 'Place order'}
+                  Proceed to checkout
                 </button>
               </div>
             </>

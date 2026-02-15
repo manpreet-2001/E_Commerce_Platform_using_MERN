@@ -1,0 +1,246 @@
+.checkout-page {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.checkout-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.checkout-container {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.checkout-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.checkout-back {
+  display: inline-block;
+  font-size: 0.9375rem;
+  color: #64748b;
+  text-decoration: none;
+  margin-bottom: 24px;
+}
+
+.checkout-back:hover {
+  color: #0f172a;
+}
+
+.checkout-error {
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 0.9375rem;
+  margin-bottom: 20px;
+}
+
+.checkout-loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: #64748b;
+}
+
+.checkout-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0f172a;
+  border-radius: 50%;
+  animation: checkout-spin 0.7s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes checkout-spin {
+  to { transform: rotate(360deg); }
+}
+
+.checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.checkout-section {
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.checkout-section:last-of-type {
+  border-bottom: none;
+}
+
+.checkout-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 16px;
+}
+
+.checkout-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkout-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checkout-fields label span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.checkout-fields input {
+  padding: 12px 14px;
+  font-size: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.checkout-fields input:focus {
+  outline: none;
+  border-color: #0f172a;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+}
+
+.checkout-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 540px) {
+  .checkout-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkout-payment-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkout-payment-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.checkout-payment-option:has(input:checked) {
+  border-color: #0f172a;
+  background: #f8fafc;
+}
+
+.checkout-payment-disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  background: #f8fafc;
+}
+
+.checkout-payment-disabled input:disabled {
+  cursor: not-allowed;
+}
+
+.checkout-payment-label {
+  font-weight: 500;
+  color: #334155;
+}
+
+.checkout-coming-soon {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.checkout-summary-section {
+  padding-top: 0;
+}
+
+.checkout-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.checkout-summary-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+  color: #475569;
+}
+
+.checkout-summary-name {
+  flex: 1;
+  margin-right: 12px;
+}
+
+.checkout-summary-price {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.checkout-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  border-top: 1px solid #e2e8f0;
+}
+
+.checkout-submit {
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.checkout-submit:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.checkout-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .checkout-container {
+    padding: 20px;
+  }
+}

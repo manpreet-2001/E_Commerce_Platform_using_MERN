@@ -71,6 +71,7 @@ router.post('/', protect, async (req, res) => {
     }
 
     const shippingAddress = req.body.shippingAddress || {};
+    const paymentMethod = (req.body.paymentMethod === 'card' ? 'card' : 'cod');
     const order = await Order.create({
       user: req.user.id,
       items,
@@ -83,7 +84,8 @@ router.post('/', protect, async (req, res) => {
         country: shippingAddress.country || ''
       },
       totalAmount,
-      status: 'pending'
+      status: 'pending',
+      paymentMethod
     });
 
     await Product.bulkWrite(
