@@ -57,18 +57,19 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Register user
-  const register = async (userData) => {
+  // Register user. Pass { skipLogin: true } to only create account and not log in (redirect to login page).
+  const register = async (userData, options = {}) => {
     try {
       const res = await axios.post('/api/auth/register', userData);
-      
-      const { token: newToken, user: newUser } = res.data;
-      
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
-      setUser(newUser);
-      
-      return { success: true, message: res.data.message, user: newUser };
+
+      if (!options.skipLogin) {
+        const { token: newToken, user: newUser } = res.data;
+        localStorage.setItem('token', newToken);
+        setToken(newToken);
+        setUser(newUser);
+      }
+
+      return { success: true, message: res.data.message, user: res.data.user };
     } catch (error) {
       const data = error.response?.data;
       const message = data?.message || data?.error

@@ -63,19 +63,21 @@ const Register = () => {
 
     setLoading(true);
 
-    const result = await register({
-      name: `${firstName} ${lastName}`,
-      email,
-      password,
-      role
-    });
+    const result = await register(
+      {
+        name: `${firstName} ${lastName}`,
+        email,
+        password,
+        role
+      },
+      { skipLogin: true }
+    );
 
     if (result.success) {
-      setSuccess('Account created successfully! Redirecting...');
-      const isVendorOrAdmin = result.user && ['vendor', 'admin'].includes(result.user.role);
+      setSuccess('Successfully created new account. Redirecting to sign in…');
       setTimeout(() => {
-        navigate(isVendorOrAdmin ? '/dashboard' : '/');
-      }, 1500);
+        navigate('/login');
+      }, 2000);
     } else {
       setError(result.message);
     }
