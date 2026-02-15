@@ -133,6 +133,7 @@ const Register = () => {
               </button>
             </div>
           ) : (
+          <>
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-row">
               <div className="form-group">
@@ -311,6 +312,7 @@ const Register = () => {
               Already have an account? <Link to="/login">Sign In</Link>
             </p>
           </div>
+          </>
           )}
         </div>
       </div>

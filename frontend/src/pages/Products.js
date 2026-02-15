@@ -21,7 +21,7 @@ const DEBOUNCE_MS = 400;
 const LIMIT = 12;
 
 const Products = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -81,6 +81,15 @@ const Products = () => {
 
   const getCategoryLabel = (cat) => CATEGORIES.find(c => c.value === cat)?.label || cat;
 
+  const handleCategoryChange = (categoryValue) => {
+    setPage(1);
+    if (categoryValue) {
+      setSearchParams({ category: categoryValue });
+    } else {
+      setSearchParams({});
+    }
+  };
+
   return (
     <div className="products-page">
       <Navbar />
@@ -116,7 +125,7 @@ const Products = () => {
                     key={cat.value || 'all'}
                     type="button"
                     className={`filter-pill ${!category && !cat.value ? 'active' : category === cat.value ? 'active' : ''}`}
-                    onClick={() => setCategory(cat.value)}
+                    onClick={() => handleCategoryChange(cat.value)}
                   >
                     {cat.label}
                   </button>
