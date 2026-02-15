@@ -18,13 +18,13 @@ const STATUS_LABELS = {
 
 const Orders = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, hasRole } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isAuthenticated()) return;
+    if (!isAuthenticated() || (user && hasRole(['vendor', 'admin']))) return;
     let cancelled = false;
     const fetchOrders = async () => {
       try {
@@ -38,7 +38,7 @@ const Orders = () => {
     };
     fetchOrders();
     return () => { cancelled = true; };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   if (authLoading) {
     return (
@@ -51,6 +51,11 @@ const Orders = () => {
 
   if (!isAuthenticated()) {
     navigate('/login', { replace: true });
+    return null;
+  }
+
+  if (user && hasRole(['vendor', 'admin'])) {
+    navigate('/dashboard', { replace: true });
     return null;
   }
 

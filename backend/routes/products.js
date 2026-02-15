@@ -12,11 +12,11 @@ const canModifyProduct = (req, product) => {
 };
 
 // @route   GET /api/products
-// @desc    Get all products (optional: category, search by name/description)
+// @desc    Get all products (optional: category, search, page, limit for pagination)
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const { category, search } = req.query;
+    const { category, search, page, limit } = req.query;
     const filter = {};
 
     if (category) {
@@ -31,13 +31,28 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const products = await Product.find(filter)
-      .populate('vendor', 'name email')
-      .sort({ createdAt: -1 });
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 12));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [total, products] = await Promise.all([
+      Product.countDocuments(filter),
+      Product.find(filter)
+        .populate('vendor', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean()
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum);
 
     res.json({
       success: true,
       count: products.length,
+      total,
+      page: pageNum,
+      totalPages,
       data: products
     });
   } catch (error) {

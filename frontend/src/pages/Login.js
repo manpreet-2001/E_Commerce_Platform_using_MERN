@@ -7,7 +7,7 @@ import './Auth.css';
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,6 +15,7 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
   const { email, password, rememberMe } = formData;
@@ -26,21 +27,32 @@ const Login = () => {
       [name]: type === 'checkbox' ? checked : value
     });
     setError('');
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
 
-    if (!email || !password) {
-      setError('Please fill in all fields');
+    const err = {};
+    if (!email.trim()) err.email = 'Email is required';
+    else if (!email.includes('@')) err.email = 'Please enter a valid email address';
+    if (!password) err.password = 'Password is required';
+
+    if (Object.keys(err).length > 0) {
+      setFieldErrors(err);
       return;
     }
 
     setLoading(true);
 
     const result = await login(email, password);
-    
+
     if (result.success) {
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
@@ -50,7 +62,7 @@ const Login = () => {
     } else {
       setError(result.message);
     }
-    
+
     setLoading(false);
   };
 
@@ -84,8 +96,10 @@ const Login = () => {
                   value={email}
                   onChange={handleChange}
                   placeholder="Enter your email"
+                  className={fieldErrors.email ? 'input-error' : ''}
                 />
               </div>
+              {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
             </div>
 
             <div className="form-group">
@@ -99,6 +113,7 @@ const Login = () => {
                   value={password}
                   onChange={handleChange}
                   placeholder="Enter your password"
+                  className={fieldErrors.password ? 'input-error' : ''}
                 />
                 <button
                   type="button"
@@ -110,6 +125,7 @@ const Login = () => {
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
+              {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
             </div>
 
             <div className="form-options">

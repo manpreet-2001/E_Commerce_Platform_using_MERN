@@ -74,6 +74,36 @@
   border: 1px solid #bbf7d0;
 }
 
+.auth-success-panel {
+  text-align: center;
+  padding: 40px 24px;
+}
+
+.auth-success-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: bold;
+  line-height: 64px;
+  border-radius: 50%;
+}
+
+.auth-success-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+}
+
+.auth-success-text {
+  font-size: 1rem;
+  color: #666;
+  margin: 0 0 24px 0;
+}
+
 /* Form Styles */
 .auth-form {
   display: flex;

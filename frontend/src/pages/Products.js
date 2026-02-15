@@ -18,6 +18,8 @@ const CATEGORIES = [
 
 const DEBOUNCE_MS = 400;
 
+const LIMIT = 12;
+
 const Products = () => {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
@@ -26,6 +28,9 @@ const Products = () => {
   const [category, setCategory] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   // Sync category from URL (e.g. /products?category=phones)
   useEffect(() => {
@@ -33,23 +38,29 @@ const Products = () => {
     setCategory(q);
   }, [searchParams]);
 
-  // Debounce search input
+  // Debounce search input and reset to page 1 when search/category changes
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [searchInput]);
 
   useEffect(() => {
+    setPage(1);
+  }, [category, search]);
+
+  useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       setError('');
       try {
-        const params = {};
+        const params = { page, limit: LIMIT };
         if (category) params.category = category;
         if (search) params.search = search;
         const res = await axios.get('/api/products', { params });
         const list = res.data?.data ?? res.data;
         setProducts(Array.isArray(list) ? list : []);
+        setTotal(res.data?.total ?? 0);
+        setTotalPages(res.data?.totalPages ?? 0);
       } catch (err) {
         const msg = err.response?.data?.message || err.message || 'Failed to load products';
         const isNetworkError = !err.response && (err.message === 'Network Error' || err.code === 'ECONNREFUSED');
@@ -58,13 +69,15 @@ const Products = () => {
           : msg
         );
         setProducts([]);
+        setTotal(0);
+        setTotalPages(0);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
-  }, [category, search]);
+  }, [category, search, page]);
 
   const getCategoryLabel = (cat) => CATEGORIES.find(c => c.value === cat)?.label || cat;
 
@@ -136,15 +149,40 @@ const Products = () => {
               </p>
             </div>
           ) : (
-            <div className="products-grid">
-              {products.map((product) => (
-                <ProductCard
-                  key={product._id}
-                  product={product}
-                  getCategoryLabel={getCategoryLabel}
-                />
-              ))}
-            </div>
+            <>
+              <div className="products-grid">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product._id}
+                    product={product}
+                    getCategoryLabel={getCategoryLabel}
+                  />
+                ))}
+              </div>
+              {totalPages > 1 && (
+                <nav className="products-pagination" aria-label="Product list pagination">
+                  <button
+                    type="button"
+                    className="products-pagination-btn"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1 || loading}
+                  >
+                    Previous
+                  </button>
+                  <span className="products-pagination-info">
+                    Page {page} of {totalPages} ({total} total)
+                  </span>
+                  <button
+                    type="button"
+                    className="products-pagination-btn"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages || loading}
+                  >
+                    Next
+                  </button>
+                </nav>
+              )}
+            </>
           )}
         </div>
       </main>

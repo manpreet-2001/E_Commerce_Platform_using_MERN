@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import { getPasswordRuleResults, isPasswordStrong, getPasswordErrorMessage } from '../utils/passwordStrength';
@@ -23,40 +22,18 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(''); // only for API / generic errors
   const [fieldErrors, setFieldErrors] = useState({});
-  const [success, setSuccess] = useState('');
+  const [accountCreated, setAccountCreated] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [emailCheckStatus, setEmailCheckStatus] = useState('idle'); // 'idle' | 'checking' | 'taken' | 'available'
-  const [emailCheckMessage, setEmailCheckMessage] = useState('');
 
   const { firstName, lastName, email, phone, role, password, confirmPassword, agreeTerms } = formData;
 
   const passwordRuleResults = useMemo(() => getPasswordRuleResults(password), [password]);
   const confirmMismatch = confirmPassword.length > 0 && password !== confirmPassword;
-  const emailTaken = emailCheckStatus === 'taken';
 
   const getPhoneDigits = (value) => (value || '').replace(/\D/g, '');
   const isPhoneValid = (value) => getPhoneDigits(value).length === 10;
   const phoneInvalid = phone.length > 0 && !isPhoneValid(phone);
-
-  const checkEmailAvailability = useCallback(async (emailValue) => {
-    const trimmed = (emailValue || '').trim().toLowerCase();
-    if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
-      setEmailCheckStatus('idle');
-      setEmailCheckMessage('');
-      return;
-    }
-    setEmailCheckStatus('checking');
-    setEmailCheckMessage('');
-    try {
-      const res = await axios.get('/api/auth/check-email', { params: { email: trimmed } });
-      setEmailCheckStatus(res.data.available ? 'available' : 'taken');
-      setEmailCheckMessage(res.data.message || '');
-    } catch {
-      setEmailCheckStatus('idle');
-      setEmailCheckMessage('');
-    }
-  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -70,13 +47,12 @@ const Register = () => {
       delete next[name];
       return next;
     });
-    if (name === 'email') setEmailCheckStatus('idle');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
+    setAccountCreated(false);
     setFieldErrors({});
 
     const err = {};
@@ -84,7 +60,7 @@ const Register = () => {
     if (!firstName.trim()) err.firstName = 'First name is required';
     if (!lastName.trim()) err.lastName = 'Last name is required';
     if (!email.trim()) err.email = 'Email is required';
-    else if (emailTaken) err.email = emailCheckMessage || 'This email is already registered';
+    else if (!email.includes('@')) err.email = 'Please enter a valid email address';
     if (!phone.trim()) err.phone = 'Phone number is required';
     else if (!isPhoneValid(phone)) err.phone = 'Phone number must be exactly 10 digits';
     if (!password) err.password = 'Password is required';
@@ -111,13 +87,11 @@ const Register = () => {
     );
 
     if (result.success) {
-      setSuccess('Successfully created new account. Redirecting to sign in…');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+      setAccountCreated(true);
     } else {
       const msg = result.message || '';
-      if (msg.toLowerCase().includes('email')) {
+      const isEmailError = msg.toLowerCase().includes('email') || msg.toLowerCase().includes('already exists');
+      if (isEmailError) {
         setFieldErrors({ email: msg });
       } else {
         setError(msg);
@@ -144,8 +118,21 @@ const Register = () => {
           </div>
 
           {error && <div className="auth-alert auth-alert-error">{error}</div>}
-          {success && <div className="auth-alert auth-alert-success">{success}</div>}
 
+          {accountCreated ? (
+            <div className="auth-success-panel">
+              <div className="auth-success-icon">✓</div>
+              <h2 className="auth-success-title">Account created successfully</h2>
+              <p className="auth-success-text">You can now sign in with your email and password.</p>
+              <button
+                type="button"
+                className="btn-submit"
+                onClick={() => navigate('/login')}
+              >
+                Continue to Sign In
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-row">
               <div className="form-group">
@@ -190,18 +177,11 @@ const Register = () => {
                   name="email"
                   value={email}
                   onChange={handleChange}
-                  onBlur={() => checkEmailAvailability(email)}
                   placeholder="Enter your email"
-                  className={fieldErrors.email || emailTaken ? 'input-error' : ''}
+                  className={fieldErrors.email ? 'input-error' : ''}
                 />
               </div>
-              {emailCheckStatus === 'checking' && <p className="field-hint">Checking email…</p>}
-              {(fieldErrors.email || (emailCheckStatus === 'taken' && !fieldErrors.email)) && (
-                <p className="field-error">{fieldErrors.email || emailCheckMessage || 'This email is already registered.'}</p>
-              )}
-              {emailCheckStatus === 'available' && !fieldErrors.email && (
-                <p className="field-success">Email is available.</p>
-              )}
+              {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
             </div>
 
             <div className="form-group">
@@ -331,6 +311,7 @@ const Register = () => {
               Already have an account? <Link to="/login">Sign In</Link>
             </p>
           </div>
+          )}
         </div>
       </div>
     </div>
