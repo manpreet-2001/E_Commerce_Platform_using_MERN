@@ -62,7 +62,7 @@ const Checkout = () => {
         paymentMethod: paymentMethod
       });
       await clearCart();
-      navigate('/orders', { replace: true });
+      navigate('/orders', { replace: true, state: { orderPlaced: true } });
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to place order';
       setMessage(msg);
