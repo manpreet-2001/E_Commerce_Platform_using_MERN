@@ -105,6 +105,12 @@
 .orders-card-id {
   font-weight: 600;
   color: #0f172a;
+  text-decoration: none;
+}
+
+.orders-card-id:hover {
+  color: #3b82f6;
+  text-decoration: underline;
 }
 
 .orders-card-status {
@@ -135,10 +141,21 @@
 }
 
 .orders-card-item {
+  padding: 4px 0;
+}
+
+.orders-card-item-inner {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
+  padding: 6px 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.orders-card-item-inner:hover {
+  color: #3b82f6;
 }
 
 .orders-card-item-image-wrap {
@@ -216,4 +233,42 @@
   color: #334155;
   margin: 0;
   line-height: 1.4;
+}
+
+.orders-card-address {
+  font-size: 0.9375rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.orders-card-address-line {
+  display: block;
+}
+
+.orders-card-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.orders-cancel-btn {
+  padding: 10px 18px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #b91c1c;
+  background: #fff;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.orders-cancel-btn:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.orders-cancel-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }

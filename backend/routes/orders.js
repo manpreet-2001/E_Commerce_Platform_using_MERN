@@ -155,6 +155,46 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
+// @route   PATCH /api/orders/:id/cancel
+// @desc    Cancel order (customer/owner only; only pending or confirmed)
+// @access  Private
+router.patch('/:id/cancel', protect, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    const isOwner = order.user.toString() === req.user.id;
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: 'Not authorized to cancel this order' });
+    }
+    const cancellable = ['pending', 'confirmed'];
+    if (!cancellable.includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Order cannot be cancelled (current status: ${order.status})`
+      });
+    }
+    await Product.bulkWrite(
+      order.items.map((item) => ({
+        updateOne: {
+          filter: { _id: item.product },
+          update: { $inc: { stock: item.quantity } }
+        }
+      }))
+    );
+    order.status = 'cancelled';
+    await order.save();
+    const populated = await Order.findById(order._id)
+      .populate('user', 'name email')
+      .populate({ path: 'items.product', select: 'name price image' });
+    res.json({ success: true, message: 'Order cancelled', data: populated });
+  } catch (error) {
+    console.error('PATCH /api/orders/:id/cancel error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // @route   PATCH /api/orders/:id/status
 // @desc    Update order status (vendor for orders containing their products, or admin)
 // @access  Private
