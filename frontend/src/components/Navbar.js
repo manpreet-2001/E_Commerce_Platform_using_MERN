@@ -84,6 +84,12 @@ const Navbar = () => {
             )}
             {isAuthenticated() ? (
               <>
+                {isVendorOrAdmin && (
+                  <span className="nav-role-badge" title={user?.role}>
+                    <span className="nav-role-dot" aria-hidden="true" />
+                    <span className="nav-role-text">{user?.role === 'admin' ? 'Admin' : 'Vendor'}</span>
+                  </span>
+                )}
                 <span className="nav-user">Hi, {user?.name?.split(' ')[0]}</span>
                 <button type="button" onClick={handleLogout} className="nav-logout-btn">
                   Logout
