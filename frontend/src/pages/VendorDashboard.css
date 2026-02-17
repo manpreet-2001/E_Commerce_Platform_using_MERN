@@ -1,0 +1,131 @@
+.vendor-dashboard-page {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.vendor-dashboard-main {
+  padding: 24px 20px 48px;
+}
+
+.vendor-dashboard-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.vendor-dashboard-header {
+  margin-bottom: 24px;
+}
+
+.vendor-dashboard-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.vendor-dashboard-greeting {
+  font-size: 0.9375rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.vendor-dashboard-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.vendor-dashboard-tab {
+  padding: 10px 18px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #64748b;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.vendor-dashboard-tab:hover {
+  color: #0f172a;
+}
+
+.vendor-dashboard-tab.active {
+  color: #0f172a;
+  border-bottom-color: #0f172a;
+}
+
+.vendor-dashboard-error {
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  margin-bottom: 16px;
+}
+
+.vendor-dashboard-loading {
+  padding: 48px;
+  text-align: center;
+  color: #64748b;
+}
+
+.vendor-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 640px) {
+  .vendor-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.vendor-stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.vendor-stat-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.vendor-stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.vendor-dashboard-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.vendor-dashboard-overview-text {
+  margin: 0 0 16px 0;
+  font-size: 0.9375rem;
+  color: #64748b;
+}
+
+.vendor-dashboard-back {
+  font-size: 0.9375rem;
+  color: #64748b;
+  text-decoration: none;
+}
+
+.vendor-dashboard-back:hover {
+  color: #0f172a;
+}
