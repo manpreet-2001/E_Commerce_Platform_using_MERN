@@ -441,9 +441,39 @@ const VendorDashboard = () => {
                 </div>
                 <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
-            ) : activeTab === 'profile' || activeTab === 'notifications' ? (
+            ) : activeTab === 'profile' ? (
+              <div className="vendor-profile-page">
+                <div className="vendor-content-header">
+                  <h1 className="vendor-dashboard-title">Vendor Profile</h1>
+                  <p className="vendor-dashboard-greeting">Your account details.</p>
+                </div>
+                <section className="vendor-profile-card">
+                  <div className="vendor-profile-avatar" aria-hidden="true">
+                    {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div className="vendor-profile-info">
+                    <p className="vendor-profile-field">
+                      <span className="vendor-profile-field-label">Name</span>
+                      <span className="vendor-profile-field-value">{user?.name || '—'}</span>
+                    </p>
+                    <p className="vendor-profile-field">
+                      <span className="vendor-profile-field-label">Email</span>
+                      <span className="vendor-profile-field-value">{user?.email || '—'}</span>
+                    </p>
+                    <p className="vendor-profile-field">
+                      <span className="vendor-profile-field-label">Account type</span>
+                      <span className="vendor-profile-field-value">Vendor</span>
+                    </p>
+                  </div>
+                  <div className="vendor-profile-actions">
+                    <Link to="/profile" className="vendor-btn vendor-btn-primary">Edit profile</Link>
+                    <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                  </div>
+                </section>
+              </div>
+            ) : activeTab === 'notifications' ? (
               <div className="vendor-placeholder-page">
-                <h1 className="vendor-dashboard-title">{SIDEBAR_NAV.find((n) => n.id === activeTab)?.label || activeTab}</h1>
+                <h1 className="vendor-dashboard-title">Notifications</h1>
                 <p className="vendor-dashboard-overview-text">Coming soon.</p>
                 <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
               </div>

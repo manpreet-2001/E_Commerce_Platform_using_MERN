@@ -35,27 +35,32 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   // Load user when token exists
-  useEffect(() => {
-    const loadUser = async () => {
-      if (token) {
-        try {
-          const res = await axios.get('/api/auth/me');
-          setUser(res.data.user);
-        } catch (error) {
-          // Token invalid or expired
-          console.error('Failed to load user:', error);
-          logout();
-        }
-      }
-      setLoading(false);
-    };
+  const loadUser = async () => {
+    if (!token) return null;
+    try {
+      const res = await axios.get('/api/auth/me');
+      setUser(res.data.user);
+      return res.data.user;
+    } catch (error) {
+      console.error('Failed to load user:', error);
+      logout();
+      return null;
+    }
+  };
 
+  useEffect(() => {
     if (token) {
-      loadUser();
+      loadUser().finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
   }, [token]);
+
+  // Re-fetch current user (e.g. after profile update)
+  const refreshUser = async () => {
+    if (token) return loadUser();
+    return null;
+  };
 
   // Register user. Pass { skipLogin: true } to only create account and not log in (redirect to login page).
   const register = async (userData, options = {}) => {
@@ -134,7 +139,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     isAuthenticated,
-    hasRole
+    hasRole,
+    refreshUser
   };
 
   return (

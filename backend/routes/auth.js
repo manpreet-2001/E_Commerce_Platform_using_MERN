@@ -287,4 +287,58 @@ router.get('/me', protect, async (req, res) => {
   }
 });
 
+// @route   PUT /api/auth/profile
+// @desc    Update current user profile (name, email)
+// @access  Private
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User no longer exists' });
+    }
+    const { name, email } = req.body;
+
+    if (name !== undefined) {
+      const trimmed = (name || '').trim();
+      if (trimmed.length < 2) {
+        return res.status(400).json({ success: false, message: 'Name must be at least 2 characters' });
+      }
+      if (trimmed.length > 50) {
+        return res.status(400).json({ success: false, message: 'Name cannot exceed 50 characters' });
+      }
+      user.name = trimmed;
+    }
+
+    if (email !== undefined) {
+      const trimmed = (email || '').trim().toLowerCase();
+      const emailRegex = /^\S+@\S+\.\S+$/;
+      if (!emailRegex.test(trimmed)) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid email' });
+      }
+      const existing = await User.findOne({ email: trimmed });
+      if (existing && existing._id.toString() !== user._id.toString()) {
+        return res.status(400).json({ success: false, message: 'This email is already in use' });
+      }
+      user.email = trimmed;
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profile updated',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('PUT /api/auth/profile error:', error.message || error);
+    if (process.env.NODE_ENV !== 'production') console.error(error.stack);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;
