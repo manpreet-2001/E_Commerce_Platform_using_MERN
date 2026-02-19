@@ -149,6 +149,12 @@
   font-weight: 500;
   color: #475569;
   padding: 0 8px;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-user:hover {
+  color: #0f172a;
 }
 
 .nav-auth-link {

@@ -15,7 +15,9 @@ import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import VendorDashboard from './pages/VendorDashboard';
+import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
+import PrivateRoute from './components/PrivateRoute';
 import './App.css';
 
 // Guest Route - redirects to home if already logged in
@@ -57,6 +59,11 @@ function App() {
               <VendorRoute>
                 <VendorDashboard />
               </VendorRoute>
+            } />
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <Profile />
+              </PrivateRoute>
             } />
             <Route path="/" element={<HomePage />} />
             <Route path="*" element={<NotFound />} />

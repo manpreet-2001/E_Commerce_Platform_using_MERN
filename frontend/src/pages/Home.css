@@ -93,6 +93,32 @@
   padding: 0 24px;
 }
 
+/* Override App.css .home-hero h1 / p (higher specificity so hero text is visible on dark slides) */
+.home-hero-slider .home-hero-content .home-hero-badge,
+.home-hero-slider .home-hero-content p.home-hero-badge {
+  display: inline-block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #f1f5f9 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+.home-hero-slider .home-hero-content .home-hero-title,
+.home-hero-slider .home-hero-content h1.home-hero-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  color: #ffffff !important;
+  line-height: 1.2;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
 .home-hero-badge {
   display: inline-block;
   font-size: 0.8125rem;
@@ -121,6 +147,18 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.home-hero-slider .home-hero-content .home-hero-subtitle,
+.home-hero-slider .home-hero-content p.home-hero-subtitle {
+  font-size: 1.125rem;
+  color: #e2e8f0 !important;
+  line-height: 1.6;
+  margin-bottom: 40px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .home-hero-subtitle {

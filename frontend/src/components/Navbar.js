@@ -67,6 +67,13 @@ const Navbar = () => {
                 </Link>
               </li>
             )}
+            {isAuthenticated() && (
+              <li className="nav-item">
+                <Link to="/profile" className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}>
+                  Profile
+                </Link>
+              </li>
+            )}
           </ul>
 
           <div className="nav-actions">
@@ -90,7 +97,7 @@ const Navbar = () => {
                     <span className="nav-role-text">{user?.role === 'admin' ? 'Admin' : 'Vendor'}</span>
                   </span>
                 )}
-                <span className="nav-user">Hi, {user?.name?.split(' ')[0]}</span>
+                <Link to="/profile" className="nav-user">Hi, {user?.name?.split(' ')[0]}</Link>
                 <button type="button" onClick={handleLogout} className="nav-logout-btn">
                   Logout
                 </button>
