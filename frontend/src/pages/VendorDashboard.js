@@ -358,7 +358,90 @@ const VendorDashboard = () => {
                   )}
                 </section>
               </div>
-            ) : activeTab === 'profile' || activeTab === 'analytics' || activeTab === 'notifications' ? (
+            ) : activeTab === 'analytics' ? (
+              <div className="vendor-analytics-page">
+                <div className="vendor-content-header">
+                  <h1 className="vendor-dashboard-title">Analytics</h1>
+                  <p className="vendor-dashboard-greeting">Charts and statistics for your products and orders.</p>
+                </div>
+                <div className="vendor-kpi-cards">
+                  <div className="vendor-kpi-card">
+                    <div className="vendor-kpi-top">
+                      <span className="vendor-kpi-value">{vendorStats.totalProducts}</span>
+                      <span className="vendor-kpi-badge">Active</span>
+                    </div>
+                    <span className="vendor-kpi-label">Total products listed</span>
+                  </div>
+                  <div className="vendor-kpi-card">
+                    <div className="vendor-kpi-top">
+                      <span className="vendor-kpi-value">{vendorStats.totalOrders}</span>
+                      <span className="vendor-kpi-badge">All time</span>
+                    </div>
+                    <span className="vendor-kpi-label">Total orders received</span>
+                  </div>
+                  <div className="vendor-kpi-card">
+                    <div className="vendor-kpi-top">
+                      <span className="vendor-kpi-value">{formatPrice(vendorStats.totalRevenue)}</span>
+                      <span className="vendor-kpi-badge">Revenue</span>
+                    </div>
+                    <span className="vendor-kpi-label">Total revenue</span>
+                  </div>
+                  <div className="vendor-kpi-card">
+                    <div className="vendor-kpi-top">
+                      <span className="vendor-kpi-value">{vendorStats.pendingOrders}</span>
+                      <span className="vendor-kpi-badge vendor-kpi-badge-warn">Needs action</span>
+                    </div>
+                    <span className="vendor-kpi-label">Pending orders</span>
+                  </div>
+                </div>
+                <div className="vendor-charts-row">
+                  <div className="vendor-chart-card">
+                    <h3 className="vendor-chart-title">Orders by status</h3>
+                    {vendorStats.ordersByStatusData.length === 0 ? (
+                      <p className="vendor-chart-empty">No order data yet</p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={260}>
+                        <PieChart>
+                          <Pie
+                            data={vendorStats.ordersByStatusData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {vendorStats.ordersByStatusData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                  <div className="vendor-chart-card">
+                    <h3 className="vendor-chart-title">Orders & revenue (last 30 days)</h3>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={vendorStats.ordersByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                        <Tooltip
+                          formatter={(value, name) => (name === 'revenue' ? formatPrice(value) : value)}
+                          labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ''}
+                        />
+                        <Bar yAxisId="left" dataKey="orders" name="Orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <Bar yAxisId="right" dataKey="revenue" name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+              </div>
+            ) : activeTab === 'profile' || activeTab === 'notifications' ? (
               <div className="vendor-placeholder-page">
                 <h1 className="vendor-dashboard-title">{SIDEBAR_NAV.find((n) => n.id === activeTab)?.label || activeTab}</h1>
                 <p className="vendor-dashboard-overview-text">Coming soon.</p>
