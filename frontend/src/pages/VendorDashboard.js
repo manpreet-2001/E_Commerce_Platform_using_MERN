@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { computeVendorStats } from '../utils/vendorStats';
@@ -241,6 +254,52 @@ const VendorDashboard = () => {
                       <span className="vendor-kpi-badge vendor-kpi-badge-success">+0%</span>
                     </div>
                     <span className="vendor-kpi-label">Today&apos;s sales</span>
+                  </div>
+                </div>
+
+                <div className="vendor-charts-row">
+                  <div className="vendor-chart-card">
+                    <h3 className="vendor-chart-title">Orders by status</h3>
+                    {vendorStats.ordersByStatusData.length === 0 ? (
+                      <p className="vendor-chart-empty">No order data yet</p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={260}>
+                        <PieChart>
+                          <Pie
+                            data={vendorStats.ordersByStatusData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {vendorStats.ordersByStatusData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                  <div className="vendor-chart-card">
+                    <h3 className="vendor-chart-title">Orders & revenue (last 30 days)</h3>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={vendorStats.ordersByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                        <Tooltip
+                          formatter={(value, name) => (name === 'revenue' ? formatPrice(value) : value)}
+                          labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ''}
+                        />
+                        <Bar yAxisId="left" dataKey="orders" name="Orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <Bar yAxisId="right" dataKey="revenue" name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 
