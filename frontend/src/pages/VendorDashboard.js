@@ -359,7 +359,7 @@ const VendorDashboard = () => {
                 </section>
               </div>
             ) : activeTab === 'analytics' ? (
-              <div className="vendor-analytics-page">
+              <div className="vendor-analytics-page" data-section="analytics">
                 <div className="vendor-content-header">
                   <h1 className="vendor-dashboard-title">Analytics</h1>
                   <p className="vendor-dashboard-greeting">Charts and statistics for your products and orders.</p>
