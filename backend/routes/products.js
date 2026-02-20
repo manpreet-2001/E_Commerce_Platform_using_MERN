@@ -11,6 +11,18 @@ const canModifyProduct = (req, product) => {
   return product.vendor.toString() === req.user._id.toString();
 };
 
+/** Ensure product has primary image set from images array when image is empty (for display). */
+function normalizeProductImage(product) {
+  if (!product) return product;
+  const p = product.toObject ? product.toObject() : { ...product };
+  const hasImages = Array.isArray(p.images) && p.images.length > 0;
+  const hasImage = p.image && String(p.image).trim();
+  if (!hasImage && hasImages) {
+    p.image = p.images[0];
+  }
+  return p;
+}
+
 // @route   GET /api/products
 // @desc    Get all products (optional: category, search, page, limit for pagination)
 // @access  Public
@@ -46,14 +58,15 @@ router.get('/', async (req, res) => {
     ]);
 
     const totalPages = Math.ceil(total / limitNum);
+    const data = products.map((p) => normalizeProductImage(p));
 
     res.json({
       success: true,
-      count: products.length,
+      count: data.length,
       total,
       page: pageNum,
       totalPages,
-      data: products
+      data
     });
   } catch (error) {
     console.error('GET /api/products error:', error.message || error);
@@ -72,11 +85,13 @@ router.get('/vendor/mine', protect, authorize('vendor', 'admin'), async (req, re
   try {
     const products = await Product.find({ vendor: req.user._id })
       .populate('vendor', 'name email')
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .lean();
+    const data = products.map((p) => normalizeProductImage(p));
     res.json({
       success: true,
-      count: products.length,
-      data: products
+      count: data.length,
+      data
     });
   } catch (error) {
     console.error('GET /api/products/vendor/mine error:', error.message || error);
@@ -102,9 +117,10 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    const data = normalizeProductImage(product);
     res.json({
       success: true,
-      data: product
+      data
     });
   } catch (error) {
     if (error.kind === 'ObjectId') {

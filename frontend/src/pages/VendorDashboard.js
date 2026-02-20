@@ -143,8 +143,9 @@ const VendorDashboard = () => {
       } else {
         await axios.post('/api/products', payload);
       }
-      await fetchProducts();
       closeForm();
+      setFormLoading(false);
+      fetchProducts();
     } catch (err) {
       setFormError(err.response?.data?.message || (editingProduct?._id ? 'Update failed' : 'Add failed'));
     } finally {

@@ -86,11 +86,16 @@ const ProductDetail = () => {
     );
   }
 
-  const imageList = (Array.isArray(product.images) && product.images.length > 0)
-    ? product.images
-    : product.image
-      ? [product.image]
-      : [];
+  const imagesArray = (Array.isArray(product.images) && product.images.length > 0)
+    ? product.images.filter((u) => u && String(u).trim())
+    : [];
+  const primaryImage = product.image && String(product.image).trim() ? product.image.trim() : '';
+  const imageList =
+    imagesArray.length > 0
+      ? imagesArray
+      : primaryImage
+        ? [primaryImage]
+        : [];
   const mainImage = imageList[selectedImageIndex] || imageList[0];
 
   return (

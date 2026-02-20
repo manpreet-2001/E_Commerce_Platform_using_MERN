@@ -55,31 +55,41 @@ function getInitialFormData(product) {
 
 const MAX_IMAGES = 10;
 
+function getOrderedItemsFromProduct(product) {
+  if (!product) return [];
+  const images = Array.isArray(product.images) && product.images.length > 0
+    ? product.images.map((s) => String(s).trim()).filter(Boolean)
+    : product.image
+      ? [String(product.image).trim()]
+      : [];
+  return images.map((url) => ({ type: 'existing', url }));
+}
+
 const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
   const isEdit = !!product;
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState(() => getInitialFormData(product));
-  const [imageFiles, setImageFiles] = useState([]);
+  const [orderedImageItems, setOrderedImageItems] = useState(() => getOrderedItemsFromProduct(product));
   const [filePreviewUrls, setFilePreviewUrls] = useState([]);
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
 
   useEffect(() => {
     const initial = getInitialFormData(product);
     setFormData(initial);
-    setImageFiles([]);
-    setFilePreviewUrls([]);
+    setOrderedImageItems(getOrderedItemsFromProduct(product));
     setSelectedPreviewIndex(0);
   }, [product?._id]);
 
   useEffect(() => {
-    if (imageFiles.length === 0) {
+    const newFiles = orderedImageItems.filter((x) => x.type === 'new').map((x) => x.file);
+    if (newFiles.length === 0) {
       setFilePreviewUrls([]);
       return;
     }
-    const urls = imageFiles.map((f) => URL.createObjectURL(f));
+    const urls = newFiles.map((f) => URL.createObjectURL(f));
     setFilePreviewUrls(urls);
     return () => urls.forEach((u) => URL.revokeObjectURL(u));
-  }, [imageFiles]);
+  }, [orderedImageItems]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -93,45 +103,59 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
       if (file.size > MAX_SIZE_MB * 1024 * 1024) return false;
       return true;
     });
-    const currentUrls = formData.images || [];
-    const total = currentUrls.length + imageFiles.length + valid.length;
-    if (valid.length > 0 && total <= MAX_IMAGES) {
-      setImageFiles((prev) => [...prev, ...valid].slice(0, MAX_IMAGES - currentUrls.length));
+    if (valid.length > 0 && orderedImageItems.length + valid.length <= MAX_IMAGES) {
+      setOrderedImageItems((prev) => [...prev, ...valid.map((file) => ({ type: 'new', file }))]);
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const removeExistingImage = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: (prev.images || []).filter((_, i) => i !== index),
-    }));
+  const removeImageAt = (globalIndex) => {
+    setOrderedImageItems((prev) => prev.filter((_, i) => i !== globalIndex));
+    setSelectedPreviewIndex((prev) => {
+      if (prev === globalIndex) return prev === 0 ? 0 : prev - 1;
+      return prev > globalIndex ? prev - 1 : prev;
+    });
   };
 
-  const removeNewImage = (index) => {
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  const moveImage = (index, direction) => {
+    if (direction === 'up' && index <= 0) return;
+    if (direction === 'down' && index >= orderedImageItems.length - 1) return;
+    const swap = direction === 'up' ? index - 1 : index + 1;
+    setOrderedImageItems((prev) => {
+      const next = [...prev];
+      [next[index], next[swap]] = [next[swap], next[index]];
+      return next;
+    });
+    setSelectedPreviewIndex((prev) => (prev === index ? swap : prev === swap ? index : prev));
   };
 
   const clearAllImages = () => {
-    setFormData((prev) => ({ ...prev, images: [] }));
-    setImageFiles([]);
+    setOrderedImageItems([]);
+    setSelectedPreviewIndex(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const existingUrls = (formData.images || []).map((s) => s.trim()).filter(Boolean);
+    const newFiles = orderedImageItems.filter((i) => i.type === 'new').map((i) => i.file);
     let uploadedUrls = [];
 
-    if (imageFiles.length > 0) {
+    if (newFiles.length > 0) {
       try {
-        for (const file of imageFiles) {
+        if (newFiles.length === 1) {
           const fd = new FormData();
-          fd.append('image', file);
+          fd.append('image', newFiles[0]);
           const res = await axios.post('/api/upload', fd, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
           if (res.data?.url) uploadedUrls.push(res.data.url);
+        } else {
+          const fd = new FormData();
+          newFiles.forEach((file) => fd.append('images', file));
+          const res = await axios.post('/api/upload/multiple', fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+          if (Array.isArray(res.data?.urls)) uploadedUrls = res.data.urls;
         }
       } catch (err) {
         const msg = err.response?.data?.message || 'Image upload failed';
@@ -140,28 +164,32 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
       }
     }
 
-    const allImages = [...existingUrls, ...uploadedUrls];
+    let newIndex = 0;
+    const allUrls = orderedImageItems.map((item) =>
+      item.type === 'existing' ? item.url : uploadedUrls[newIndex++]
+    ).filter(Boolean);
 
     const payload = {
       name: formData.name.trim(),
       description: formData.description.trim(),
       price: parseFloat(formData.price),
       category: formData.category,
-      images: allImages,
+      images: allUrls,
       stock: parseInt(formData.stock, 10) || 0,
     };
     onSubmit(payload);
   };
 
-  const existingImages = formData.images || [];
-  const hasAnyImages = existingImages.length > 0 || imageFiles.length > 0;
+  const hasAnyImages = orderedImageItems.length > 0;
 
-  const galleryItems = [
-    ...existingImages.map((url, i) => ({ type: 'existing', url: getImageUrl(url), index: i })),
-    ...filePreviewUrls.map((url, i) => ({ type: 'new', url, index: i })),
-  ];
+  const galleryItems = orderedImageItems.map((item, i) => {
+    const newIndex = orderedImageItems.slice(0, i).filter((x) => x.type === 'new').length;
+    const displayUrl =
+      item.type === 'existing' ? getImageUrl(item.url) : filePreviewUrls[newIndex] || '';
+    return { type: item.type, url: displayUrl, index: i };
+  });
 
-  const totalImages = existingImages.length + filePreviewUrls.length;
+  const totalImages = orderedImageItems.length;
   useEffect(() => {
     if (totalImages > 0 && selectedPreviewIndex >= totalImages) {
       setSelectedPreviewIndex(totalImages - 1);
@@ -258,7 +286,7 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
         <h3 id="vendor-product-image-heading" className="vendor-product-form-section-title">Product images</h3>
       <div className="vendor-product-form-group">
         <label htmlFor="vendor-product-image-input">Image files</label>
-        <p className="vendor-product-form-hint">JPEG, PNG, GIF or WebP. Max {MAX_SIZE_MB}MB per file. Up to {MAX_IMAGES} images.</p>
+        <p className="vendor-product-form-hint">JPEG, PNG, GIF or WebP. Max {MAX_SIZE_MB}MB per file. Up to {MAX_IMAGES} images. Use ↑ ↓ to reorder; first image is the main product image.</p>
         <input
           id="vendor-product-image-input"
           ref={fileInputRef}
@@ -295,14 +323,40 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
                   >
                     <img src={item.url} alt="" className="vendor-product-form-gallery-thumb" />
                   </button>
-                  <button
-                    type="button"
-                    className="vendor-product-form-preview-remove vendor-product-form-gallery-thumb-remove"
-                    onClick={() => (item.type === 'existing' ? removeExistingImage(item.index) : removeNewImage(item.index))}
-                    aria-label={`Remove image ${globalIndex + 1}`}
-                  >
-                    Remove
-                  </button>
+                  <div className="vendor-product-form-gallery-thumb-actions">
+                    <button
+                      type="button"
+                      className="vendor-product-form-gallery-move-btn"
+                      onClick={() => moveImage(globalIndex, 'up')}
+                      disabled={globalIndex === 0}
+                      aria-label={`Move image ${globalIndex + 1} up`}
+                      title="Move up"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="vendor-product-form-gallery-move-btn"
+                      onClick={() => moveImage(globalIndex, 'down')}
+                      disabled={globalIndex === totalImages - 1}
+                      aria-label={`Move image ${globalIndex + 1} down`}
+                      title="Move down"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      className="vendor-product-form-preview-remove vendor-product-form-gallery-thumb-remove"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeImageAt(globalIndex);
+                      }}
+                      aria-label={`Remove image ${globalIndex + 1}`}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
