@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -11,11 +11,27 @@ const Navbar = () => {
   const { user, isAuthenticated, logout, hasRole } = useAuth();
   const { cartCount } = useCart();
   const isVendorOrAdmin = isAuthenticated() && hasRole(['vendor', 'admin']);
+  const isCustomer = isAuthenticated() && !isVendorOrAdmin;
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
 
   const handleLogout = () => {
+    setUserMenuOpen(false);
     logout();
     navigate('/');
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [userMenuOpen]);
 
   return (
     <header className="navbar-wrapper">
@@ -67,7 +83,7 @@ const Navbar = () => {
                 </Link>
               </li>
             )}
-            {isAuthenticated() && (
+            {isAuthenticated() && isVendorOrAdmin && (
               <li className="nav-item">
                 <Link to="/profile" className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}>
                   Profile
@@ -97,10 +113,48 @@ const Navbar = () => {
                     <span className="nav-role-text">{user?.role === 'admin' ? 'Admin' : 'Vendor'}</span>
                   </span>
                 )}
-                <Link to="/profile" className="nav-user">Hi, {user?.name?.split(' ')[0]}</Link>
-                <button type="button" onClick={handleLogout} className="nav-logout-btn">
-                  Logout
-                </button>
+                {isCustomer && (
+                  <div className="nav-user-menu-wrap" ref={userMenuRef}>
+                    <button
+                      type="button"
+                      className="nav-hamburger-btn"
+                      onClick={() => setUserMenuOpen((o) => !o)}
+                      aria-expanded={userMenuOpen}
+                      aria-haspopup="true"
+                      aria-label="User menu"
+                    >
+                      <span className="nav-hamburger-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="3" y1="12" x2="21" y2="12" />
+                          <line x1="3" y1="6" x2="21" y2="6" />
+                          <line x1="3" y1="18" x2="21" y2="18" />
+                        </svg>
+                      </span>
+                      <span className="nav-hamburger-label">Hi, {user?.name?.split(' ')[0]}</span>
+                    </button>
+                    {userMenuOpen && (
+                      <div className="nav-user-dropdown" role="menu">
+                        <Link to="/profile" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          Profile
+                        </Link>
+                        <Link to="/orders" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          My Orders
+                        </Link>
+                        <button type="button" className="nav-user-dropdown-item nav-user-dropdown-logout" role="menuitem" onClick={handleLogout}>
+                          Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {isVendorOrAdmin && (
+                  <>
+                    <Link to="/profile" className="nav-user">Hi, {user?.name?.split(' ')[0]}</Link>
+                    <button type="button" onClick={handleLogout} className="nav-logout-btn">
+                      Logout
+                    </button>
+                  </>
+                )}
               </>
             ) : (
               <>

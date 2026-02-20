@@ -3,11 +3,23 @@
   text-align: left;
 }
 
-.vendor-product-form-title {
-  font-size: 1.25rem;
+.vendor-product-form-section {
+  margin-bottom: 24px;
+}
+
+.vendor-product-form-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.vendor-product-form-section-title {
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: #0f172a;
-  margin: 0 0 20px 0;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 12px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .vendor-product-form-error {

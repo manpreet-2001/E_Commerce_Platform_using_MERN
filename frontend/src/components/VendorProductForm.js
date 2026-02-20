@@ -15,46 +15,52 @@ const CATEGORIES = [
 
 const ACCEPT_IMAGES = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
 const MAX_SIZE_MB = 5;
+const CATEGORY_VALUES = CATEGORIES.map((c) => c.value);
+
+/** Normalize API product into form field values (strings for inputs, valid category). */
+function getInitialFormData(product) {
+  if (!product) {
+    return {
+      name: '',
+      description: '',
+      price: '',
+      category: 'electronics',
+      image: '',
+      stock: '0',
+    };
+  }
+  const category = product.category && CATEGORY_VALUES.includes(product.category)
+    ? product.category
+    : 'electronics';
+  const price = product.price != null && product.price !== ''
+    ? String(Number(product.price))
+    : '';
+  const stock = product.stock != null && product.stock !== ''
+    ? String(Math.max(0, Math.floor(Number(product.stock))))
+    : '0';
+  return {
+    name: product.name != null ? String(product.name).trim() : '',
+    description: product.description != null ? String(product.description) : '',
+    price,
+    category,
+    image: product.image != null ? String(product.image).trim() : '',
+    stock,
+  };
+}
 
 const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
   const isEdit = !!product;
   const fileInputRef = useRef(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category: 'electronics',
-    image: '',
-    stock: '0',
-  });
+  const [formData, setFormData] = useState(() => getInitialFormData(product));
   const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [imagePreview, setImagePreview] = useState(() => (product?.image || null));
 
   useEffect(() => {
-    if (product) {
-      setFormData({
-        name: product.name || '',
-        description: product.description || '',
-        price: product.price ?? '',
-        category: product.category || 'electronics',
-        image: product.image || '',
-        stock: product.stock ?? '0',
-      });
-      setImagePreview(product.image || null);
-      setImageFile(null);
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        price: '',
-        category: 'electronics',
-        image: '',
-        stock: '0',
-      });
-      setImagePreview(null);
-      setImageFile(null);
-    }
-  }, [product]);
+    const initial = getInitialFormData(product);
+    setFormData(initial);
+    setImagePreview(product?.image || null);
+    setImageFile(null);
+  }, [product?._id]);
 
   useEffect(() => {
     if (imageFile) {
@@ -124,11 +130,12 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
 
   return (
     <form className="vendor-product-form" onSubmit={handleSubmit}>
-      <h3 className="vendor-product-form-title">{isEdit ? 'Edit Product' : 'Add Product'}</h3>
-      {error && <div className="vendor-product-form-error">{error}</div>}
+      {error && <div className="vendor-product-form-error" role="alert">{error}</div>}
 
-      <div className="vendor-product-form-group">
-        <label htmlFor="vendor-product-name">Name *</label>
+      <section className="vendor-product-form-section" aria-labelledby="vendor-product-details-heading">
+        <h3 id="vendor-product-details-heading" className="vendor-product-form-section-title">Product details</h3>
+        <div className="vendor-product-form-group">
+          <label htmlFor="vendor-product-name">Name *</label>
         <input
           id="vendor-product-name"
           name="name"
@@ -154,7 +161,10 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
           maxLength={2000}
         />
       </div>
+      </section>
 
+      <section className="vendor-product-form-section" aria-labelledby="vendor-product-pricing-heading">
+        <h3 id="vendor-product-pricing-heading" className="vendor-product-form-section-title">Pricing & stock</h3>
       <div className="vendor-product-form-row">
         <div className="vendor-product-form-group">
           <label htmlFor="vendor-product-price">Price *</label>
@@ -184,9 +194,8 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
           />
         </div>
       </div>
-
-      <div className="vendor-product-form-group">
-        <label htmlFor="vendor-product-category">Category *</label>
+        <div className="vendor-product-form-group">
+          <label htmlFor="vendor-product-category">Category *</label>
         <select
           id="vendor-product-category"
           name="category"
@@ -200,12 +209,16 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
             </option>
           ))}
         </select>
-      </div>
+        </div>
+      </section>
 
+      <section className="vendor-product-form-section" aria-labelledby="vendor-product-image-heading">
+        <h3 id="vendor-product-image-heading" className="vendor-product-form-section-title">Product image</h3>
       <div className="vendor-product-form-group">
-        <label>Product image</label>
+        <label htmlFor="vendor-product-image-input">Image file</label>
         <p className="vendor-product-form-hint">JPEG, PNG, GIF or WebP. Max {MAX_SIZE_MB}MB.</p>
         <input
+          id="vendor-product-image-input"
           ref={fileInputRef}
           type="file"
           accept={ACCEPT_IMAGES}
@@ -231,6 +244,7 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
           </div>
         )}
       </div>
+      </section>
 
       <div className="vendor-product-form-actions">
         <button type="button" className="vendor-product-form-btn vendor-product-form-btn-cancel" onClick={onCancel}>

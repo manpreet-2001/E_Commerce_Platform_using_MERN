@@ -599,9 +599,39 @@ const VendorDashboard = () => {
       </div>
 
       {formOpen && (
-        <div className="vendor-modal-backdrop" onClick={closeForm}>
-          <div className="vendor-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="vendor-modal-backdrop"
+          onClick={closeForm}
+          role="presentation"
+        >
+          <div
+            className="vendor-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="vendor-product-form-title"
+            aria-describedby="vendor-product-form-desc"
+          >
+            <div className="vendor-modal-header">
+              <h2 id="vendor-product-form-title" className="vendor-modal-title">
+                {editingProduct ? 'Edit product' : 'Add product'}
+              </h2>
+              <button
+                type="button"
+                className="vendor-modal-close"
+                onClick={closeForm}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <p id="vendor-product-form-desc" className="vendor-modal-desc">
+              {editingProduct
+                ? 'Update the details below and save changes.'
+                : 'Fill in the details to add a new product.'}
+            </p>
             <VendorProductForm
+              key={editingProduct?._id ?? 'new'}
               product={editingProduct}
               onSubmit={handleFormSubmit}
               onCancel={closeForm}
