@@ -15,7 +15,31 @@
 }
 
 .profile-header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+}
+
+/* Success feedback */
+.profile-success {
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  animation: profile-success-in 0.25s ease;
+}
+
+@keyframes profile-success-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .profile-title {
@@ -90,6 +114,24 @@
   margin: 0;
 }
 
+.profile-form-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 20px 0;
+}
+
+.profile-required {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.profile-field-hint-inline {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0 0 6px 0;
+}
+
 .profile-form-error {
   font-size: 0.9375rem;
   color: #b91c1c;
@@ -134,6 +176,18 @@
 .profile-input:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.profile-input-invalid,
+.profile-input.profile-input-invalid:focus {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.15);
+}
+
+.profile-field-error {
+  font-size: 0.8125rem;
+  color: #b91c1c;
+  margin: 6px 0 0 0;
 }
 
 .profile-role-readonly {
@@ -189,6 +243,51 @@
 .profile-btn-secondary:hover {
   border-color: #cbd5e1;
   background: #f8fafc;
+}
+
+/* Password section */
+.profile-password-card {
+  margin-top: 24px;
+}
+
+.profile-password-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 20px 0;
+}
+
+.profile-password-form .profile-form-error {
+  margin-bottom: 16px;
+}
+
+.profile-success-inline {
+  font-size: 0.9375rem;
+  color: #166534;
+  background: #dcfce7;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 0 0 16px 0;
+  border: 1px solid #86efac;
+}
+
+.profile-password-rules {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  font-size: 0.8125rem;
+  list-style: none;
+}
+
+.profile-password-rules li {
+  margin-bottom: 4px;
+}
+
+.profile-password-rule-pass {
+  color: #166534;
+}
+
+.profile-password-rule-fail {
+  color: #64748b;
 }
 
 @media (max-width: 640px) {

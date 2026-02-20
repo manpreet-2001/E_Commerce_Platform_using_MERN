@@ -12,6 +12,7 @@ const Navbar = () => {
   const { cartCount } = useCart();
   const isVendorOrAdmin = isAuthenticated() && hasRole(['vendor', 'admin']);
   const isCustomer = isAuthenticated() && !isVendorOrAdmin;
+  const showHamburger = isAuthenticated();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -113,7 +114,7 @@ const Navbar = () => {
                     <span className="nav-role-text">{user?.role === 'admin' ? 'Admin' : 'Vendor'}</span>
                   </span>
                 )}
-                {isCustomer && (
+                {showHamburger && (
                   <div className="nav-user-menu-wrap" ref={userMenuRef}>
                     <button
                       type="button"
@@ -137,23 +138,22 @@ const Navbar = () => {
                         <Link to="/profile" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                           Profile
                         </Link>
-                        <Link to="/orders" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
-                          My Orders
-                        </Link>
+                        {isCustomer && (
+                          <Link to="/orders" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                            My Orders
+                          </Link>
+                        )}
+                        {isVendorOrAdmin && (
+                          <Link to="/dashboard" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                            Dashboard
+                          </Link>
+                        )}
                         <button type="button" className="nav-user-dropdown-item nav-user-dropdown-logout" role="menuitem" onClick={handleLogout}>
                           Logout
                         </button>
                       </div>
                     )}
                   </div>
-                )}
-                {isVendorOrAdmin && (
-                  <>
-                    <Link to="/profile" className="nav-user">Hi, {user?.name?.split(' ')[0]}</Link>
-                    <button type="button" onClick={handleLogout} className="nav-logout-btn">
-                      Logout
-                    </button>
-                  </>
                 )}
               </>
             ) : (

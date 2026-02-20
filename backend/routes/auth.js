@@ -288,17 +288,28 @@ router.get('/me', protect, async (req, res) => {
 });
 
 // @route   PUT /api/auth/profile
-// @desc    Update current user profile (name, email)
+// @desc    Update current user profile (name, email). At least one field required.
 // @access  Private
+// @body    { name?, email? } - both optional but at least one must be provided
 router.put('/profile', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(401).json({ success: false, message: 'User no longer exists' });
     }
-    const { name, email } = req.body;
 
-    if (name !== undefined) {
+    const { name, email } = req.body;
+    const hasName = name !== undefined && name !== null;
+    const hasEmail = email !== undefined && email !== null;
+
+    if (!hasName && !hasEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide at least one field to update (name or email)'
+      });
+    }
+
+    if (hasName) {
       const trimmed = (name || '').trim();
       if (trimmed.length < 2) {
         return res.status(400).json({ success: false, message: 'Name must be at least 2 characters' });
@@ -309,13 +320,16 @@ router.put('/profile', protect, async (req, res) => {
       user.name = trimmed;
     }
 
-    if (email !== undefined) {
+    if (hasEmail) {
       const trimmed = (email || '').trim().toLowerCase();
       const emailRegex = /^\S+@\S+\.\S+$/;
+      if (!trimmed) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
       if (!emailRegex.test(trimmed)) {
         return res.status(400).json({ success: false, message: 'Please enter a valid email' });
       }
-      const existing = await User.findOne({ email: trimmed });
+      const existing = await User.findOne({ email: trimmed }).select('_id').lean();
       if (existing && existing._id.toString() !== user._id.toString()) {
         return res.status(400).json({ success: false, message: 'This email is already in use' });
       }
@@ -335,7 +349,73 @@ router.put('/profile', protect, async (req, res) => {
       }
     });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+    if (error.code === 11000 || (error.message && error.message.includes('E11000'))) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email is already in use'
+      });
+    }
     console.error('PUT /api/auth/profile error:', error.message || error);
+    if (process.env.NODE_ENV !== 'production') console.error(error.stack);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/auth/password
+// @desc    Update current user password. Requires current password.
+// @access  Private
+// @body    { currentPassword, newPassword }
+router.put('/password', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User no longer exists' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    const current = (currentPassword || '').trim();
+    const newP = (newPassword || '').trim();
+
+    if (!current) {
+      return res.status(400).json({ success: false, message: 'Current password is required' });
+    }
+    if (!newP) {
+      return res.status(400).json({ success: false, message: 'New password is required' });
+    }
+
+    const isMatch = await user.comparePassword(current);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    const passwordErrors = validatePasswordStrength(newP);
+    if (passwordErrors) {
+      return res.status(400).json({
+        success: false,
+        message: `New password must have: ${passwordErrors.join('; ')}`
+      });
+    }
+
+    user.password = newP;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ success: false, message: messages.join(', ') });
+    }
+    console.error('PUT /api/auth/password error:', error.message || error);
     if (process.env.NODE_ENV !== 'production') console.error(error.stack);
     res.status(500).json({ success: false, message: 'Server error' });
   }
