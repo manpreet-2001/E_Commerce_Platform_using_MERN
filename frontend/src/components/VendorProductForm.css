@@ -73,12 +73,88 @@
   background: #e5e7eb;
 }
 
-.vendor-product-form-preview-wrap {
+.vendor-product-form-gallery {
   margin-top: 12px;
+}
+
+.vendor-product-form-gallery-main {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1;
+  background: #f1f5f9;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.vendor-product-form-gallery-main-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.vendor-product-form-gallery-thumbs {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 10px;
+}
+
+.vendor-product-form-gallery-thumb-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.vendor-product-form-gallery-thumb-wrap.selected .vendor-product-form-gallery-thumb-btn {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.25);
+}
+
+.vendor-product-form-gallery-thumb-btn {
+  padding: 0;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vendor-product-form-gallery-thumb-btn:hover {
+  border-color: #94a3b8;
+}
+
+.vendor-product-form-gallery-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  display: block;
+}
+
+.vendor-product-form-gallery-thumb-remove {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+}
+
+.vendor-product-form-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.vendor-product-form-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.vendor-product-form-preview-grid .vendor-product-form-preview-wrap {
+  margin-top: 0;
 }
 
 .vendor-product-form-preview {
@@ -102,6 +178,23 @@
 
 .vendor-product-form-preview-remove:hover {
   background: #fecaca;
+}
+
+.vendor-product-form-clear-images {
+  margin-top: 12px;
+  padding: 8px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.vendor-product-form-clear-images:hover {
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .vendor-product-form-group input:not(.vendor-product-form-file-input),

@@ -127,14 +127,18 @@ router.get('/:id', async (req, res) => {
 // @access  Private (vendor, admin)
 router.post('/', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {
-    const { name, description, price, category, image, stock } = req.body;
+    const { name, description, price, category, image, images, stock } = req.body;
+
+    const imageList = Array.isArray(images) ? images.filter(Boolean).map((s) => String(s).trim()) : [];
+    const primaryImage = imageList[0] || (image != null ? String(image).trim() : '') || '';
 
     const product = await Product.create({
       name,
       description: description || '',
       price,
       category,
-      image: image || '',
+      image: primaryImage,
+      images: imageList.length ? imageList : (primaryImage ? [primaryImage] : []),
       vendor: req.user._id,
       stock: stock !== undefined ? stock : 0
     });
@@ -183,15 +187,22 @@ router.put('/:id', protect, async (req, res) => {
       });
     }
 
-    const { name, description, price, category, image, stock } = req.body;
+    const { name, description, price, category, image, images, stock } = req.body;
 
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (price !== undefined) updates.price = price;
     if (category !== undefined) updates.category = category;
-    if (image !== undefined) updates.image = image;
     if (stock !== undefined) updates.stock = stock;
+
+    if (images !== undefined) {
+      const imageList = Array.isArray(images) ? images.filter(Boolean).map((s) => String(s).trim()) : [];
+      updates.images = imageList;
+      updates.image = imageList[0] || '';
+    } else if (image !== undefined) {
+      updates.image = image;
+    }
 
     product = await Product.findByIdAndUpdate(
       req.params.id,

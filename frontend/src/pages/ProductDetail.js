@@ -25,6 +25,7 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [cartMessage, setCartMessage] = useState('');
   const [adding, setAdding] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -33,6 +34,7 @@ const ProductDetail = () => {
       try {
         const res = await axios.get(`/api/products/${id}`);
         setProduct(res.data.data);
+        setSelectedImageIndex(0);
       } catch (err) {
         setError(err.response?.data?.message || 'Product not found');
       } finally {
@@ -84,6 +86,13 @@ const ProductDetail = () => {
     );
   }
 
+  const imageList = (Array.isArray(product.images) && product.images.length > 0)
+    ? product.images
+    : product.image
+      ? [product.image]
+      : [];
+  const mainImage = imageList[selectedImageIndex] || imageList[0];
+
   return (
     <div className="products-page">
       <Navbar />
@@ -98,32 +107,41 @@ const ProductDetail = () => {
           <Link to="/products" className="detail-back">← Back to products</Link>
 
           <div className="product-detail">
-            <div className="product-detail-image-wrap">
-              {product.image ? (
-                <img 
-                  src={getImageUrl(product.image)} 
-                  alt={product.name} 
-                  className="product-detail-image"
-                  onError={(e) => {
-                    const imageUrl = getImageUrl(product.image);
-                    console.error('❌ Image failed to load:', {
-                      original: product.image,
-                      converted: imageUrl,
-                      productId: product._id,
-                      productName: product.name
-                    });
-                    console.error('   Check browser Network tab to see the failed request');
-                    console.error('   Ensure REACT_APP_API_BASE is set in your deployment environment variables');
-                    e.target.style.display = 'none';
-                    const placeholder = e.target.nextSibling;
-                    if (placeholder) placeholder.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              <div className="product-card-placeholder" style={{ minHeight: 320, display: product.image ? 'none' : 'flex' }}>
-                <span className="placeholder-icon">📷</span>
-                <span>No image</span>
+            <div className="product-detail-gallery">
+              <div className="product-detail-image-wrap">
+                {mainImage ? (
+                  <img
+                    src={getImageUrl(mainImage)}
+                    alt={product.name}
+                    className="product-detail-image"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const placeholder = e.target.nextSibling;
+                      if (placeholder) placeholder.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className="product-card-placeholder" style={{ minHeight: 320, display: mainImage ? 'none' : 'flex' }}>
+                  <span className="placeholder-icon">📷</span>
+                  <span>No image</span>
+                </div>
               </div>
+              {imageList.length > 1 && (
+                <div className="product-detail-thumbs" role="tablist" aria-label="Product images">
+                  {imageList.map((url, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`product-detail-thumb-btn ${selectedImageIndex === i ? 'selected' : ''}`}
+                      onClick={() => setSelectedImageIndex(i)}
+                      aria-label={`View image ${i + 1}`}
+                      aria-selected={selectedImageIndex === i}
+                    >
+                      <img src={getImageUrl(url)} alt="" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="product-detail-info">
               <span className="product-detail-category">{formatCategory(product.category)}</span>

@@ -45,6 +45,7 @@ const Navbar = () => {
         <div className="navbar-container">
           <Logo asLink={true} size="small" className="navbar-logo" />
 
+          {/* Main nav: no Profile link — customers use hamburger menu, vendors use Dashboard → Vendor Profile */}
           <ul className="nav-menu">
             <li className="nav-item">
               <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
@@ -84,13 +85,6 @@ const Navbar = () => {
                 </Link>
               </li>
             )}
-            {isAuthenticated() && isVendorOrAdmin && (
-              <li className="nav-item">
-                <Link to="/profile" className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}>
-                  Profile
-                </Link>
-              </li>
-            )}
           </ul>
 
           <div className="nav-actions">
@@ -122,16 +116,21 @@ const Navbar = () => {
                       onClick={() => setUserMenuOpen((o) => !o)}
                       aria-expanded={userMenuOpen}
                       aria-haspopup="true"
-                      aria-label="User menu"
+                      aria-label="User menu (Profile, Dashboard, Logout)"
                     >
-                      <span className="nav-hamburger-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <span className="nav-hamburger-icon" aria-hidden="true" title="Menu">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="3" y1="12" x2="21" y2="12" />
                           <line x1="3" y1="6" x2="21" y2="6" />
                           <line x1="3" y1="18" x2="21" y2="18" />
                         </svg>
                       </span>
                       <span className="nav-hamburger-label">Hi, {user?.name?.split(' ')[0]}</span>
+                      <span className="nav-hamburger-chevron" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </span>
                     </button>
                     {userMenuOpen && (
                       <div className="nav-user-dropdown" role="menu">

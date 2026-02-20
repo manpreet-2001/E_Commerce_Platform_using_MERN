@@ -17,7 +17,7 @@ const ACCEPT_IMAGES = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
 const MAX_SIZE_MB = 5;
 const CATEGORY_VALUES = CATEGORIES.map((c) => c.value);
 
-/** Normalize API product into form field values (strings for inputs, valid category). */
+/** Normalize API product into form field values. Supports both image (single) and images (array). */
 function getInitialFormData(product) {
   if (!product) {
     return {
@@ -25,7 +25,7 @@ function getInitialFormData(product) {
       description: '',
       price: '',
       category: 'electronics',
-      image: '',
+      images: [],
       stock: '0',
     };
   }
@@ -38,37 +38,48 @@ function getInitialFormData(product) {
   const stock = product.stock != null && product.stock !== ''
     ? String(Math.max(0, Math.floor(Number(product.stock))))
     : '0';
+  const images = Array.isArray(product.images) && product.images.length > 0
+    ? product.images.map((s) => String(s).trim()).filter(Boolean)
+    : product.image
+      ? [String(product.image).trim()]
+      : [];
   return {
     name: product.name != null ? String(product.name).trim() : '',
     description: product.description != null ? String(product.description) : '',
     price,
     category,
-    image: product.image != null ? String(product.image).trim() : '',
+    images,
     stock,
   };
 }
+
+const MAX_IMAGES = 10;
 
 const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
   const isEdit = !!product;
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState(() => getInitialFormData(product));
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(() => (product?.image || null));
+  const [imageFiles, setImageFiles] = useState([]);
+  const [filePreviewUrls, setFilePreviewUrls] = useState([]);
+  const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
 
   useEffect(() => {
     const initial = getInitialFormData(product);
     setFormData(initial);
-    setImagePreview(product?.image || null);
-    setImageFile(null);
+    setImageFiles([]);
+    setFilePreviewUrls([]);
+    setSelectedPreviewIndex(0);
   }, [product?._id]);
 
   useEffect(() => {
-    if (imageFile) {
-      const url = URL.createObjectURL(imageFile);
-      setImagePreview(url);
-      return () => URL.revokeObjectURL(url);
+    if (imageFiles.length === 0) {
+      setFilePreviewUrls([]);
+      return;
     }
-  }, [imageFile]);
+    const urls = imageFiles.map((f) => URL.createObjectURL(f));
+    setFilePreviewUrls(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [imageFiles]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -76,38 +87,52 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.match(/^image\/(jpeg|jpg|png|gif|webp)$/)) {
-      return;
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    const valid = files.filter((file) => {
+      if (!file.type.match(/^image\/(jpeg|jpg|png|gif|webp)$/)) return false;
+      if (file.size > MAX_SIZE_MB * 1024 * 1024) return false;
+      return true;
+    });
+    const currentUrls = formData.images || [];
+    const total = currentUrls.length + imageFiles.length + valid.length;
+    if (valid.length > 0 && total <= MAX_IMAGES) {
+      setImageFiles((prev) => [...prev, ...valid].slice(0, MAX_IMAGES - currentUrls.length));
     }
-    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      return;
-    }
-    setImageFile(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const clearImage = () => {
-    setImageFile(null);
-    if (!product?.image) setImagePreview(null);
-    else setImagePreview(product.image);
-    setFormData((prev) => ({ ...prev, image: product?.image || '' }));
+  const removeExistingImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const removeNewImage = (index) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearAllImages = () => {
+    setFormData((prev) => ({ ...prev, images: [] }));
+    setImageFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let imageUrl = formData.image?.trim() || '';
+    const existingUrls = (formData.images || []).map((s) => s.trim()).filter(Boolean);
+    let uploadedUrls = [];
 
-    if (imageFile) {
+    if (imageFiles.length > 0) {
       try {
-        const fd = new FormData();
-        fd.append('image', imageFile);
-        const res = await axios.post('/api/upload', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        if (res.data?.url) imageUrl = res.data.url;
+        for (const file of imageFiles) {
+          const fd = new FormData();
+          fd.append('image', file);
+          const res = await axios.post('/api/upload', fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+          if (res.data?.url) uploadedUrls.push(res.data.url);
+        }
       } catch (err) {
         const msg = err.response?.data?.message || 'Image upload failed';
         onSubmit({ imageError: msg });
@@ -115,18 +140,35 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
       }
     }
 
+    const allImages = [...existingUrls, ...uploadedUrls];
+
     const payload = {
       name: formData.name.trim(),
       description: formData.description.trim(),
       price: parseFloat(formData.price),
       category: formData.category,
-      image: imageUrl,
+      images: allImages,
       stock: parseInt(formData.stock, 10) || 0,
     };
     onSubmit(payload);
   };
 
-  const displayPreview = imagePreview || formData.image;
+  const existingImages = formData.images || [];
+  const hasAnyImages = existingImages.length > 0 || imageFiles.length > 0;
+
+  const galleryItems = [
+    ...existingImages.map((url, i) => ({ type: 'existing', url: getImageUrl(url), index: i })),
+    ...filePreviewUrls.map((url, i) => ({ type: 'new', url, index: i })),
+  ];
+
+  const totalImages = existingImages.length + filePreviewUrls.length;
+  useEffect(() => {
+    if (totalImages > 0 && selectedPreviewIndex >= totalImages) {
+      setSelectedPreviewIndex(totalImages - 1);
+    }
+  }, [totalImages]);
+
+  const mainPreview = galleryItems[selectedPreviewIndex];
 
   return (
     <form className="vendor-product-form" onSubmit={handleSubmit}>
@@ -213,35 +255,67 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
       </section>
 
       <section className="vendor-product-form-section" aria-labelledby="vendor-product-image-heading">
-        <h3 id="vendor-product-image-heading" className="vendor-product-form-section-title">Product image</h3>
+        <h3 id="vendor-product-image-heading" className="vendor-product-form-section-title">Product images</h3>
       <div className="vendor-product-form-group">
-        <label htmlFor="vendor-product-image-input">Image file</label>
-        <p className="vendor-product-form-hint">JPEG, PNG, GIF or WebP. Max {MAX_SIZE_MB}MB.</p>
+        <label htmlFor="vendor-product-image-input">Image files</label>
+        <p className="vendor-product-form-hint">JPEG, PNG, GIF or WebP. Max {MAX_SIZE_MB}MB per file. Up to {MAX_IMAGES} images.</p>
         <input
           id="vendor-product-image-input"
           ref={fileInputRef}
           type="file"
           accept={ACCEPT_IMAGES}
+          multiple
           onChange={handleFileChange}
           className="vendor-product-form-file-input"
-          aria-label="Choose image"
+          aria-label="Choose images"
         />
-        {displayPreview && (
-          <div className="vendor-product-form-preview-wrap">
-            <img
-              src={getImageUrl(displayPreview)}
-              alt="Preview"
-              className="vendor-product-form-preview"
-            />
-            <button
-              type="button"
-              className="vendor-product-form-preview-remove"
-              onClick={clearImage}
-              aria-label="Remove image"
-            >
-              Remove
-            </button>
+        {hasAnyImages && (
+          <div className="vendor-product-form-gallery">
+            <div className="vendor-product-form-gallery-main">
+              {mainPreview && (
+                <img
+                  src={mainPreview.url}
+                  alt="Preview"
+                  className="vendor-product-form-gallery-main-img"
+                />
+              )}
+            </div>
+            <div className="vendor-product-form-gallery-thumbs" role="tablist" aria-label="Image thumbnails">
+              {galleryItems.map((item, globalIndex) => (
+                <div
+                  key={item.type === 'existing' ? `existing-${item.index}` : `new-${item.index}`}
+                  className={`vendor-product-form-gallery-thumb-wrap ${selectedPreviewIndex === globalIndex ? 'selected' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className="vendor-product-form-gallery-thumb-btn"
+                    onClick={() => setSelectedPreviewIndex(globalIndex)}
+                    aria-label={`View image ${globalIndex + 1}`}
+                    aria-selected={selectedPreviewIndex === globalIndex}
+                  >
+                    <img src={item.url} alt="" className="vendor-product-form-gallery-thumb" />
+                  </button>
+                  <button
+                    type="button"
+                    className="vendor-product-form-preview-remove vendor-product-form-gallery-thumb-remove"
+                    onClick={() => (item.type === 'existing' ? removeExistingImage(item.index) : removeNewImage(item.index))}
+                    aria-label={`Remove image ${globalIndex + 1}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+        {hasAnyImages && (
+          <button
+            type="button"
+            className="vendor-product-form-clear-images"
+            onClick={clearAllImages}
+          >
+            Clear all images
+          </button>
         )}
       </div>
       </section>
