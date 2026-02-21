@@ -15,35 +15,27 @@ export const getImageUrl = (imageUrl) => {
     return trimmedUrl;
   }
   
-  // If relative path (starts with /), prepend backend URL
-  if (trimmedUrl.startsWith('/')) {
-    let backendUrl = process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_URL || '';
-    
-    // If no backend URL is set, log detailed error
+  // Relative path: leading slash (e.g. /uploads/xyz.jpg) or backend path without slash (e.g. uploads/xyz.jpg)
+  const isRelativePath = trimmedUrl.startsWith('/') || trimmedUrl.startsWith('uploads/');
+  if (isRelativePath) {
+    const pathWithSlash = trimmedUrl.startsWith('/') ? trimmedUrl : `/${trimmedUrl}`;
+    const backendUrl = process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_URL || '';
+
     if (!backendUrl) {
       console.error('❌ REACT_APP_API_BASE environment variable is not set!');
       console.error('   Image URL:', trimmedUrl);
-      console.error('   This will cause images to fail loading in production.');
-      console.error('   Solution: Set REACT_APP_API_BASE in your deployment platform:');
-      console.error('   - Render: Go to your frontend service → Environment → Add REACT_APP_API_BASE');
-      console.error('   - Value should be your backend URL, e.g., https://your-backend.onrender.com');
-      // Still return the relative URL - browser might handle it if same origin
-      // But it will likely fail and trigger onError handler
-      return trimmedUrl;
+      console.error('   Set REACT_APP_API_BASE to your backend URL in production (e.g. https://your-api.onrender.com).');
+      return pathWithSlash;
     }
-    
-    // Remove trailing slash from backend URL if present
+
     const baseUrl = backendUrl.replace(/\/$/, '');
-    const fullUrl = baseUrl + trimmedUrl;
-    
-    // Debug logging
+    const fullUrl = baseUrl + pathWithSlash;
     if (process.env.NODE_ENV === 'development') {
-      console.log('Image URL conversion:', { original: trimmedUrl, backendUrl, fullUrl });
+      console.log('Image URL conversion:', { original: trimmedUrl, fullUrl });
     }
-    
     return fullUrl;
   }
-  
-  // Return as-is if it's neither absolute nor relative (might be a data URL or other format)
+
+  // data: URLs or other formats — return as-is
   return trimmedUrl;
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
@@ -28,8 +28,16 @@ function validateEmail(email) {
 }
 
 const Profile = () => {
-  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const { user, refreshUser, hasRole } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+
+  // Vendors use Dashboard → Vendor Profile only; redirect to dashboard
+  useEffect(() => {
+    if (user && hasRole && hasRole(['vendor', 'admin'])) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, hasRole, navigate]);
   const [form, setForm] = useState({ name: '', email: '' });
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ name: '', email: '' });
@@ -73,6 +81,11 @@ const Profile = () => {
   };
 
   if (!user) {
+    return null;
+  }
+
+  // Don't render profile page for vendors; they use Dashboard only
+  if (hasRole && hasRole(['vendor', 'admin'])) {
     return null;
   }
 

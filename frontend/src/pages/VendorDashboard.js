@@ -42,7 +42,7 @@ const ORDER_STATUSES = [
 const formatPrice = (price) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price);
 
-const SIDEBAR_NAV = [
+const VENDOR_SIDEBAR_NAV = [
   { id: 'overview', label: 'Overview', icon: '🏠' },
   { id: 'products', label: 'Product Management', icon: '🛒' },
   { id: 'orders', label: 'Order Management', icon: '📋' },
@@ -51,8 +51,17 @@ const SIDEBAR_NAV = [
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
 ];
 
+const ADMIN_SIDEBAR_NAV = [
+  { id: 'overview', label: 'Overview', icon: '🏠' },
+  { id: 'products', label: 'All Products', icon: '🛒' },
+  { id: 'orders', label: 'Order Management', icon: '📋' },
+  { id: 'analytics', label: 'Analytics', icon: '📈' },
+  { id: 'notifications', label: 'Notifications', icon: '🔔' },
+];
+
 const VendorDashboard = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('overview');
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -66,23 +75,33 @@ const VendorDashboard = () => {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const res = await axios.get('/api/products/vendor/mine');
-      setProducts(res.data.data || []);
+      if (isAdmin) {
+        const res = await axios.get('/api/products?limit=100');
+        setProducts(res.data.data || []);
+      } else {
+        const res = await axios.get('/api/products/vendor/mine');
+        setProducts(res.data.data || []);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load products');
       setProducts([]);
     }
-  }, []);
+  }, [isAdmin]);
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await axios.get('/api/orders/vendor/mine');
-      setOrders(res.data.data || []);
+      if (isAdmin) {
+        const res = await axios.get('/api/orders/admin/all');
+        setOrders(res.data.data || []);
+      } else {
+        const res = await axios.get('/api/orders/vendor/mine');
+        setOrders(res.data.data || []);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load orders');
       setOrders([]);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +119,43 @@ const VendorDashboard = () => {
     () => computeVendorStats(products, orders),
     [products, orders]
   );
+
+  const adminStats = useMemo(() => {
+    if (!isAdmin) return null;
+    const pending = orders.filter((o) => o.status === 'pending').length;
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const ordersByStatus = {};
+    orders.forEach((o) => { ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1; });
+    const ordersByStatusData = Object.entries(ordersByStatus).map(([name, value]) => ({
+      name,
+      value,
+      fill: ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ef4444'][Object.keys(ordersByStatus).indexOf(name) % 5] || '#94a3b8'
+    }));
+    const dayMap = {};
+    const now = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      dayMap[key] = { date: key, label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), orders: 0, revenue: 0 };
+    }
+    orders.forEach((o) => {
+      const key = o.createdAt ? new Date(o.createdAt).toISOString().slice(0, 10) : null;
+      if (key && dayMap[key]) {
+        dayMap[key].orders += 1;
+        dayMap[key].revenue += o.totalAmount || 0;
+      }
+    });
+    const ordersByDay = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
+    return {
+      totalProducts: products.length,
+      totalOrders: orders.length,
+      pendingOrders: pending,
+      totalRevenue,
+      ordersByStatusData,
+      ordersByDay
+    };
+  }, [isAdmin, products.length, orders]);
 
   const todaySales = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -184,11 +240,13 @@ const VendorDashboard = () => {
         <aside className="vendor-dashboard-sidebar">
           <div className="vendor-sidebar-inner">
             <div className="vendor-sidebar-header">
-              <h2 className="vendor-sidebar-title">Vendor Dashboard</h2>
-              <p className="vendor-sidebar-subtitle">Manage your products and orders.</p>
+              <h2 className="vendor-sidebar-title">{isAdmin ? 'Admin Dashboard' : 'Vendor Dashboard'}</h2>
+              <p className="vendor-sidebar-subtitle">
+                {isAdmin ? 'View and manage platform data.' : 'Manage your products and orders.'}
+              </p>
             </div>
             <nav className="vendor-sidebar-nav" aria-label="Dashboard sections">
-              {SIDEBAR_NAV.map(({ id, label, icon }) => (
+              {(isAdmin ? ADMIN_SIDEBAR_NAV : VENDOR_SIDEBAR_NAV).map(({ id, label, icon }) => (
                 <button
                   key={id}
                   type="button"
@@ -201,7 +259,7 @@ const VendorDashboard = () => {
               ))}
             </nav>
             <p className="vendor-sidebar-footer">
-              Vendors can only manage their own products and orders. No platform-wide access.
+              {isAdmin ? 'Full platform access. View all products and orders.' : 'Vendors can only manage their own products and orders.'}
             </p>
           </div>
         </aside>
@@ -217,57 +275,61 @@ const VendorDashboard = () => {
                 <div className="vendor-overview-header">
                   <div>
                     <h1 className="vendor-overview-title">Overview</h1>
-                    <p className="vendor-overview-subtitle">Quick snapshot of your store performance.</p>
+                    <p className="vendor-overview-subtitle">
+                      {isAdmin ? 'Platform-wide snapshot.' : 'Quick snapshot of your store performance.'}
+                    </p>
                   </div>
                   <div className="vendor-overview-actions">
                     <Link to="/products" className="vendor-btn vendor-btn-secondary">View Store</Link>
-                    <button type="button" className="vendor-btn vendor-btn-primary" onClick={openAddForm}>
-                      Add Product
-                    </button>
+                    {!isAdmin && (
+                      <button type="button" className="vendor-btn vendor-btn-primary" onClick={openAddForm}>
+                        Add Product
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <div className="vendor-kpi-cards">
                   <div className="vendor-kpi-card">
                     <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{vendorStats.totalProducts}</span>
+                      <span className="vendor-kpi-value">{isAdmin ? (adminStats?.totalProducts ?? 0) : vendorStats.totalProducts}</span>
                       <span className="vendor-kpi-badge">Active</span>
                     </div>
-                    <span className="vendor-kpi-label">Total products listed</span>
+                    <span className="vendor-kpi-label">{isAdmin ? 'Total products on platform' : 'Total products listed'}</span>
                   </div>
                   <div className="vendor-kpi-card">
                     <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{vendorStats.totalOrders}</span>
+                      <span className="vendor-kpi-value">{isAdmin ? (adminStats?.totalOrders ?? 0) : vendorStats.totalOrders}</span>
                       <span className="vendor-kpi-badge">All time</span>
                     </div>
-                    <span className="vendor-kpi-label">Total orders received</span>
+                    <span className="vendor-kpi-label">{isAdmin ? 'Total orders' : 'Total orders received'}</span>
                   </div>
                   <div className="vendor-kpi-card">
                     <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{vendorStats.pendingOrders}</span>
+                      <span className="vendor-kpi-value">{isAdmin ? (adminStats?.pendingOrders ?? 0) : vendorStats.pendingOrders}</span>
                       <span className="vendor-kpi-badge vendor-kpi-badge-warn">Needs action</span>
                     </div>
                     <span className="vendor-kpi-label">Pending / processing</span>
                   </div>
                   <div className="vendor-kpi-card">
                     <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{formatPrice(todaySales)}</span>
-                      <span className="vendor-kpi-badge vendor-kpi-badge-success">+0%</span>
+                      <span className="vendor-kpi-value">{isAdmin ? formatPrice(adminStats?.totalRevenue ?? 0) : formatPrice(todaySales)}</span>
+                      <span className="vendor-kpi-badge vendor-kpi-badge-success">{isAdmin ? 'Revenue' : '+0%'}</span>
                     </div>
-                    <span className="vendor-kpi-label">Today&apos;s sales</span>
+                    <span className="vendor-kpi-label">{isAdmin ? 'Total revenue' : "Today's sales"}</span>
                   </div>
                 </div>
 
                 <div className="vendor-charts-row">
                   <div className="vendor-chart-card">
                     <h3 className="vendor-chart-title">Orders by status</h3>
-                    {vendorStats.ordersByStatusData.length === 0 ? (
+                    {(isAdmin ? adminStats?.ordersByStatusData : vendorStats.ordersByStatusData)?.length === 0 ? (
                       <p className="vendor-chart-empty">No order data yet</p>
                     ) : (
                       <ResponsiveContainer width="100%" height={260}>
                         <PieChart>
                           <Pie
-                            data={vendorStats.ordersByStatusData}
+                            data={isAdmin ? (adminStats?.ordersByStatusData || []) : vendorStats.ordersByStatusData}
                             dataKey="value"
                             nameKey="name"
                             cx="50%"
@@ -275,7 +337,7 @@ const VendorDashboard = () => {
                             outerRadius={80}
                             label={({ name, value }) => `${name}: ${value}`}
                           >
-                            {vendorStats.ordersByStatusData.map((entry, index) => (
+                            {(isAdmin ? (adminStats?.ordersByStatusData || []) : vendorStats.ordersByStatusData).map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.fill} />
                             ))}
                           </Pie>
@@ -288,7 +350,10 @@ const VendorDashboard = () => {
                   <div className="vendor-chart-card">
                     <h3 className="vendor-chart-title">Orders & revenue (last 30 days)</h3>
                     <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={vendorStats.ordersByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <BarChart
+                        data={isAdmin ? (adminStats?.ordersByDay || []) : vendorStats.ordersByDay}
+                        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                         <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
@@ -306,7 +371,9 @@ const VendorDashboard = () => {
 
                 <section className="vendor-recent-orders">
                   <h2 className="vendor-section-title">Recent Orders</h2>
-                  <p className="vendor-section-note">Orders shown here include only products sold by your shop.</p>
+                  <p className="vendor-section-note">
+                    {isAdmin ? 'All platform orders.' : 'Orders shown here include only products sold by your shop.'}
+                  </p>
                   {recentOrders.length === 0 ? (
                     <p className="vendor-empty-text">No orders yet.</p>
                   ) : (
@@ -325,7 +392,7 @@ const VendorDashboard = () => {
                             <tr key={order._id}>
                               <td>#{order._id.slice(-6).toUpperCase()}</td>
                               <td>{order.user?.name || order.user?.email || '—'}</td>
-                              <td>{formatPrice(order.vendorSubtotal || 0)}</td>
+                              <td>{formatPrice(isAdmin ? (order.totalAmount || 0) : (order.vendorSubtotal || 0))}</td>
                               <td>
                                 <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>
                                   {order.status}
@@ -363,33 +430,35 @@ const VendorDashboard = () => {
               <div className="vendor-analytics-page" data-section="analytics">
                 <div className="vendor-content-header">
                   <h1 className="vendor-dashboard-title">Analytics</h1>
-                  <p className="vendor-dashboard-greeting">Charts and statistics for your products and orders.</p>
+                  <p className="vendor-dashboard-greeting">
+                    {isAdmin ? 'Platform-wide charts and statistics.' : 'Charts and statistics for your products and orders.'}
+                  </p>
                 </div>
                 <div className="vendor-kpi-cards">
                   <div className="vendor-kpi-card">
                     <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{vendorStats.totalProducts}</span>
+                      <span className="vendor-kpi-value">{isAdmin ? (adminStats?.totalProducts ?? 0) : vendorStats.totalProducts}</span>
                       <span className="vendor-kpi-badge">Active</span>
                     </div>
-                    <span className="vendor-kpi-label">Total products listed</span>
+                    <span className="vendor-kpi-label">{isAdmin ? 'Total products' : 'Total products listed'}</span>
                   </div>
                   <div className="vendor-kpi-card">
                     <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{vendorStats.totalOrders}</span>
+                      <span className="vendor-kpi-value">{isAdmin ? (adminStats?.totalOrders ?? 0) : vendorStats.totalOrders}</span>
                       <span className="vendor-kpi-badge">All time</span>
                     </div>
-                    <span className="vendor-kpi-label">Total orders received</span>
+                    <span className="vendor-kpi-label">{isAdmin ? 'Total orders' : 'Total orders received'}</span>
                   </div>
                   <div className="vendor-kpi-card">
                     <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{formatPrice(vendorStats.totalRevenue)}</span>
+                      <span className="vendor-kpi-value">{formatPrice(isAdmin ? (adminStats?.totalRevenue ?? 0) : vendorStats.totalRevenue)}</span>
                       <span className="vendor-kpi-badge">Revenue</span>
                     </div>
                     <span className="vendor-kpi-label">Total revenue</span>
                   </div>
                   <div className="vendor-kpi-card">
                     <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{vendorStats.pendingOrders}</span>
+                      <span className="vendor-kpi-value">{isAdmin ? (adminStats?.pendingOrders ?? 0) : vendorStats.pendingOrders}</span>
                       <span className="vendor-kpi-badge vendor-kpi-badge-warn">Needs action</span>
                     </div>
                     <span className="vendor-kpi-label">Pending orders</span>
@@ -398,13 +467,13 @@ const VendorDashboard = () => {
                 <div className="vendor-charts-row">
                   <div className="vendor-chart-card">
                     <h3 className="vendor-chart-title">Orders by status</h3>
-                    {vendorStats.ordersByStatusData.length === 0 ? (
+                    {(isAdmin ? adminStats?.ordersByStatusData : vendorStats.ordersByStatusData)?.length === 0 ? (
                       <p className="vendor-chart-empty">No order data yet</p>
                     ) : (
                       <ResponsiveContainer width="100%" height={260}>
                         <PieChart>
                           <Pie
-                            data={vendorStats.ordersByStatusData}
+                            data={isAdmin ? (adminStats?.ordersByStatusData || []) : vendorStats.ordersByStatusData}
                             dataKey="value"
                             nameKey="name"
                             cx="50%"
@@ -412,7 +481,7 @@ const VendorDashboard = () => {
                             outerRadius={80}
                             label={({ name, value }) => `${name}: ${value}`}
                           >
-                            {vendorStats.ordersByStatusData.map((entry, index) => (
+                            {(isAdmin ? (adminStats?.ordersByStatusData || []) : vendorStats.ordersByStatusData).map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.fill} />
                             ))}
                           </Pie>
@@ -425,7 +494,10 @@ const VendorDashboard = () => {
                   <div className="vendor-chart-card">
                     <h3 className="vendor-chart-title">Orders & revenue (last 30 days)</h3>
                     <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={vendorStats.ordersByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <BarChart
+                        data={isAdmin ? (adminStats?.ordersByDay || []) : vendorStats.ordersByDay}
+                        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                         <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
@@ -482,7 +554,7 @@ const VendorDashboard = () => {
             <>
               <div className="vendor-content-header">
                 <h1 className="vendor-dashboard-title">
-                  {activeTab === 'products' ? 'Product Management' : 'Order Management'}
+                  {activeTab === 'products' ? (isAdmin ? 'All Products' : 'Product Management') : 'Order Management'}
                 </h1>
                 <p className="vendor-dashboard-greeting">Hello, {displayName}</p>
               </div>
@@ -502,13 +574,17 @@ const VendorDashboard = () => {
                 {activeTab === 'products' && (
                   <div className="vendor-products-section">
                     <div className="vendor-products-header">
-                      <h2 className="vendor-products-heading">Your products</h2>
-                      <button type="button" className="vendor-products-add-btn" onClick={openAddForm}>
-                        + Add Product
-                      </button>
+                      <h2 className="vendor-products-heading">{isAdmin ? 'All products on the platform' : 'Your products'}</h2>
+                      {!isAdmin && (
+                        <button type="button" className="vendor-products-add-btn" onClick={openAddForm}>
+                          + Add Product
+                        </button>
+                      )}
                     </div>
                     {products.length === 0 ? (
-                      <p className="vendor-dashboard-overview-text">No products yet. Click &quot;Add Product&quot; to create one.</p>
+                      <p className="vendor-dashboard-overview-text">
+                        {isAdmin ? 'No products on the platform yet.' : 'No products yet. Click "Add Product" to create one.'}
+                      </p>
                     ) : (
                       <div className="vendor-products-list">
                         {products.map((p) => (
@@ -524,15 +600,20 @@ const VendorDashboard = () => {
                               <h3 className="vendor-product-card-name">{p.name}</h3>
                               <p className="vendor-product-card-meta">
                                 {formatPrice(p.price)} · {CATEGORY_LABELS[p.category] || p.category} · Stock: {p.stock}
+                                {isAdmin && p.vendor && (
+                                  <> · <span className="vendor-product-card-vendor">Vendor: {typeof p.vendor === 'object' ? (p.vendor.name || p.vendor.email) : '—'}</span></>
+                                )}
                               </p>
-                              <div className="vendor-product-card-actions">
-                                <button type="button" className="vendor-product-card-btn vendor-product-card-btn-edit" onClick={() => openEditForm(p)}>
-                                  Edit
-                                </button>
-                                <button type="button" className="vendor-product-card-btn vendor-product-card-btn-delete" onClick={() => handleDeleteProduct(p)}>
-                                  Delete
-                                </button>
-                              </div>
+                              {!isAdmin && (
+                                <div className="vendor-product-card-actions">
+                                  <button type="button" className="vendor-product-card-btn vendor-product-card-btn-edit" onClick={() => openEditForm(p)}>
+                                    Edit
+                                  </button>
+                                  <button type="button" className="vendor-product-card-btn vendor-product-card-btn-delete" onClick={() => handleDeleteProduct(p)}>
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -543,7 +624,7 @@ const VendorDashboard = () => {
                 )}
                 {activeTab === 'orders' && (
                   <div className="vendor-orders-section">
-                    <h2 className="vendor-orders-heading">Orders containing your products</h2>
+                    <h2 className="vendor-orders-heading">{isAdmin ? 'All orders on the platform' : 'Orders containing your products'}</h2>
                     {orders.length === 0 ? (
                       <p className="vendor-dashboard-overview-text">No orders yet.</p>
                     ) : (
@@ -568,7 +649,7 @@ const VendorDashboard = () => {
                               ))}
                             </ul>
                             <div className="vendor-order-footer">
-                              <span className="vendor-order-subtotal">Your total: {formatPrice(order.vendorSubtotal || 0)}</span>
+                              <span className="vendor-order-subtotal">{isAdmin ? 'Total' : 'Your total'}: {formatPrice(isAdmin ? (order.totalAmount || 0) : (order.vendorSubtotal || 0))}</span>
                               <div className="vendor-order-actions">
                                 <label htmlFor={`status-${order._id}`} className="vendor-order-status-label">Status:</label>
                                 <select

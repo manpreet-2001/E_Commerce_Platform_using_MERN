@@ -41,6 +41,27 @@ async function getProductIdsByVendor(vendorId) {
   return products.map((p) => p._id);
 }
 
+// @route   GET /api/orders/admin/all
+// @desc    Get all orders on the platform (admin only)
+// @access  Private (admin)
+router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
+  try {
+    const orders = await Order.find({})
+      .populate('user', 'name email')
+      .populate({
+        path: 'items.product',
+        select: 'name price image vendor',
+        populate: { path: 'vendor', select: 'name email' }
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ success: true, count: orders.length, data: orders });
+  } catch (error) {
+    console.error('GET /api/orders/admin/all error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Server error while fetching orders' });
+  }
+});
+
 // @route   POST /api/orders
 // @desc    Create order from current user's cart
 // @access  Private

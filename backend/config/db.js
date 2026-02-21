@@ -40,6 +40,8 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(mongoUri, options);
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    const seedDefaultAdmin = require('../scripts/seedAdmin');
+    await seedDefaultAdmin();
   } catch (error) {
     console.error('❌ Database connection error:', error.message || error);
     

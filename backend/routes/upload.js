@@ -5,6 +5,8 @@ const { protect, authorize } = require('../middleware/auth');
 
 const MAX_MULTIPLE_FILES = 10;
 
+// In production, set BACKEND_URL (e.g. https://your-api.onrender.com) so stored image URLs
+// are absolute and work when the frontend is on a different origin.
 function getBaseUrl(req) {
   return process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
 }

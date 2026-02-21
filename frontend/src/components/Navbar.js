@@ -116,7 +116,7 @@ const Navbar = () => {
                       onClick={() => setUserMenuOpen((o) => !o)}
                       aria-expanded={userMenuOpen}
                       aria-haspopup="true"
-                      aria-label="User menu (Profile, Dashboard, Logout)"
+                      aria-label={isVendorOrAdmin ? 'User menu (Dashboard, Logout)' : 'User menu (Profile, Orders, Logout)'}
                     >
                       <span className="nav-hamburger-icon" aria-hidden="true" title="Menu">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -134,9 +134,12 @@ const Navbar = () => {
                     </button>
                     {userMenuOpen && (
                       <div className="nav-user-dropdown" role="menu">
-                        <Link to="/profile" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
-                          Profile
-                        </Link>
+                        {/* Profile only for customers; vendors use Dashboard → Vendor Profile */}
+                        {isCustomer && (
+                          <Link to="/profile" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                            Profile
+                          </Link>
+                        )}
                         {isCustomer && (
                           <Link to="/orders" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             My Orders
