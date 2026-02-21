@@ -10,8 +10,9 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, hasRole } = useAuth();
   const { cartCount } = useCart();
-  const isVendorOrAdmin = isAuthenticated() && hasRole(['vendor', 'admin']);
-  const isCustomer = isAuthenticated() && !isVendorOrAdmin;
+  const isVendor = isAuthenticated() && hasRole(['vendor']);
+  const isAdmin = isAuthenticated() && hasRole(['admin']);
+  const isCustomer = isAuthenticated() && !isVendor && !isAdmin;
   const showHamburger = isAuthenticated();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
@@ -102,10 +103,10 @@ const Navbar = () => {
             )}
             {isAuthenticated() ? (
               <>
-                {isVendorOrAdmin && (
+                {(isVendor || isAdmin) && (
                   <span className="nav-role-badge" title={user?.role}>
                     <span className="nav-role-dot" aria-hidden="true" />
-                    <span className="nav-role-text">{user?.role === 'admin' ? 'Admin' : 'Vendor'}</span>
+                    <span className="nav-role-text">{isAdmin ? 'Admin' : 'Vendor'}</span>
                   </span>
                 )}
                 {showHamburger && (
@@ -116,7 +117,7 @@ const Navbar = () => {
                       onClick={() => setUserMenuOpen((o) => !o)}
                       aria-expanded={userMenuOpen}
                       aria-haspopup="true"
-                      aria-label={isVendorOrAdmin ? 'User menu (Dashboard, Logout)' : 'User menu (Profile, Orders, Logout)'}
+                      aria-label={isVendor ? 'User menu (Dashboard, Logout)' : isAdmin ? 'User menu (Admin, Logout)' : 'User menu (Profile, Orders, Logout)'}
                     >
                       <span className="nav-hamburger-icon" aria-hidden="true" title="Menu">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -134,7 +135,6 @@ const Navbar = () => {
                     </button>
                     {userMenuOpen && (
                       <div className="nav-user-dropdown" role="menu">
-                        {/* Profile only for customers; vendors use Dashboard → Vendor Profile */}
                         {isCustomer && (
                           <Link to="/profile" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             Profile
@@ -145,9 +145,14 @@ const Navbar = () => {
                             My Orders
                           </Link>
                         )}
-                        {isVendorOrAdmin && (
+                        {isVendor && (
                           <Link to="/dashboard" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             Dashboard
+                          </Link>
+                        )}
+                        {isAdmin && (
+                          <Link to="/admin" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                            Admin
                           </Link>
                         )}
                         <button type="button" className="nav-user-dropdown-item nav-user-dropdown-logout" role="menuitem" onClick={handleLogout}>

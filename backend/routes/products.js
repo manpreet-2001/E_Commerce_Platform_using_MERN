@@ -78,8 +78,49 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @route   GET /api/products/admin/all
+// @desc    Get all products on the platform with vendor information (admin only)
+// @access  Private (admin)
+router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { page, limit } = req.query;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [total, products] = await Promise.all([
+      Product.countDocuments({}),
+      Product.find({})
+        .populate('vendor', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean()
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum);
+    const data = products.map((p) => normalizeProductImage(p));
+
+    res.json({
+      success: true,
+      count: data.length,
+      total,
+      page: pageNum,
+      totalPages,
+      data
+    });
+  } catch (error) {
+    console.error('GET /api/products/admin/all error:', error.message || error);
+    if (process.env.NODE_ENV !== 'production') console.error(error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching products'
+    });
+  }
+});
+
 // @route   GET /api/products/vendor/mine
-// @desc    Get products for the current vendor (or admin)
+// @desc    Get products for the current vendor
 // @access  Private (vendor, admin)
 router.get('/vendor/mine', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {

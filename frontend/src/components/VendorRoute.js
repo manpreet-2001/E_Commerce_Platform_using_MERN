@@ -4,15 +4,18 @@ import { useAuth } from '../context/AuthContext';
 import PrivateRoute from './PrivateRoute';
 
 /**
- * Protects routes for vendor (and admin) only.
- * Requires authentication; redirects to / if user is not vendor or admin.
+ * Protects routes for vendor only. Admin has a separate dashboard at /admin.
+ * If admin visits /dashboard, redirect to /admin.
  */
 const VendorRoute = ({ children }) => {
   const { hasRole } = useAuth();
 
+  if (hasRole(['admin'])) {
+    return <Navigate to="/admin" replace />;
+  }
   return (
     <PrivateRoute>
-      {hasRole(['vendor', 'admin']) ? children : <Navigate to="/" replace />}
+      {hasRole(['vendor']) ? children : <Navigate to="/" replace />}
     </PrivateRoute>
   );
 };
