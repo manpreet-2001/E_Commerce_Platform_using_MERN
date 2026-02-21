@@ -58,6 +58,16 @@ const AdminDashboard = () => {
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [vendorFilter, setVendorFilter] = useState('');
+  const [productSearchInput, setProductSearchInput] = useState('');
+  const [productSearchQuery, setProductSearchQuery] = useState('');
+
+  // Debounce search: update query 400ms after user stops typing
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setProductSearchQuery(productSearchInput.trim());
+    }, 400);
+    return () => clearTimeout(t);
+  }, [productSearchInput]);
 
   const fetchVendors = useCallback(async () => {
     try {
@@ -72,13 +82,14 @@ const AdminDashboard = () => {
     try {
       const params = new URLSearchParams({ limit: '100' });
       if (vendorFilter) params.set('vendor', vendorFilter);
+      if (productSearchQuery) params.set('search', productSearchQuery);
       const res = await axios.get(`/api/products/admin/all?${params.toString()}`);
       setProducts(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load products');
       setProducts([]);
     }
-  }, [vendorFilter]);
+  }, [vendorFilter, productSearchQuery]);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -451,6 +462,26 @@ const AdminDashboard = () => {
                             </option>
                           ))}
                         </select>
+                        <label htmlFor="admin-product-search" className="vendor-filter-label">Search:</label>
+                        <input
+                          id="admin-product-search"
+                          type="search"
+                          className="vendor-search-input"
+                          placeholder="Search by name or description..."
+                          value={productSearchInput}
+                          onChange={(e) => setProductSearchInput(e.target.value)}
+                          aria-label="Search products by name or description"
+                        />
+                        {productSearchInput && (
+                          <button
+                            type="button"
+                            className="vendor-search-clear"
+                            onClick={() => setProductSearchInput('')}
+                            aria-label="Clear search"
+                          >
+                            Clear
+                          </button>
+                        )}
                       </div>
                       {products.length === 0 ? (
                         <p className="vendor-dashboard-overview-text">No products on the platform yet.</p>

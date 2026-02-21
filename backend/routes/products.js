@@ -79,11 +79,11 @@ router.get('/', async (req, res) => {
 });
 
 // @route   GET /api/products/admin/all
-// @desc    Get all products on the platform with vendor information (admin only). Optional: ?vendor=id to filter by vendor.
+// @desc    Get all products on the platform with vendor information (admin only). Optional: ?vendor=id, ?search=term.
 // @access  Private (admin)
 router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
   try {
-    const { page, limit, vendor } = req.query;
+    const { page, limit, vendor, search } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
     const skip = (pageNum - 1) * limitNum;
@@ -91,6 +91,13 @@ router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
     const filter = {};
     if (vendor && typeof vendor === 'string' && vendor.trim()) {
       filter.vendor = vendor.trim();
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      const term = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } }
+      ];
     }
 
     const [total, products] = await Promise.all([

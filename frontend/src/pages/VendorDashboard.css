@@ -566,6 +566,42 @@
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
+.vendor-search-input {
+  min-width: 220px;
+  padding: 8px 12px;
+  font-size: 0.9375rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+}
+
+.vendor-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.vendor-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.vendor-search-clear {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.vendor-search-clear:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
 .vendor-products-add-btn {
   padding: 10px 18px;
   font-size: 0.9375rem;
