@@ -184,13 +184,11 @@ const VendorDashboard = () => {
         <aside className="vendor-dashboard-sidebar">
           <div className="vendor-sidebar-inner">
             <div className="vendor-sidebar-header">
-              <h2 className="vendor-sidebar-title">{isAdmin ? 'Admin Dashboard' : 'Vendor Dashboard'}</h2>
-              <p className="vendor-sidebar-subtitle">
-                {isAdmin ? 'View and manage platform data.' : 'Manage your products and orders.'}
-              </p>
+              <h2 className="vendor-sidebar-title">Vendor Dashboard</h2>
+              <p className="vendor-sidebar-subtitle">Manage your products and orders.</p>
             </div>
             <nav className="vendor-sidebar-nav" aria-label="Dashboard sections">
-              {(isAdmin ? ADMIN_SIDEBAR_NAV : VENDOR_SIDEBAR_NAV).map(({ id, label, icon }) => (
+              {VENDOR_SIDEBAR_NAV.map(({ id, label, icon }) => (
                 <button
                   key={id}
                   type="button"

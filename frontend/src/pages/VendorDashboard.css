@@ -535,6 +535,37 @@
   margin: 0;
 }
 
+.vendor-products-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.vendor-filter-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.vendor-filter-select {
+  min-width: 200px;
+  padding: 8px 12px;
+  font-size: 0.9375rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.vendor-filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
 .vendor-products-add-btn {
   padding: 10px 18px;
   font-size: 0.9375rem;

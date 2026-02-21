@@ -58,7 +58,7 @@ const Navbar = () => {
                 Shop
               </Link>
             </li>
-            {!isVendorOrAdmin && (
+            {!isVendor && !isAdmin && (
               <>
                 <li className="nav-item">
                   <Link to="/about" className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}>
@@ -72,14 +72,21 @@ const Navbar = () => {
                 </li>
               </>
             )}
-            {isVendorOrAdmin && (
+            {isVendor && (
               <li className="nav-item">
                 <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
                   Dashboard
                 </Link>
               </li>
             )}
-            {isAuthenticated() && !isVendorOrAdmin && (
+            {isAdmin && (
+              <li className="nav-item">
+                <Link to="/admin" className={`nav-link ${location.pathname === '/admin' ? 'active' : ''}`}>
+                  Admin
+                </Link>
+              </li>
+            )}
+            {isCustomer && (
               <li className="nav-item">
                 <Link to="/orders" className={`nav-link ${location.pathname === '/orders' ? 'active' : ''}`}>
                   My Orders

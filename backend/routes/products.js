@@ -79,18 +79,23 @@ router.get('/', async (req, res) => {
 });
 
 // @route   GET /api/products/admin/all
-// @desc    Get all products on the platform with vendor information (admin only)
+// @desc    Get all products on the platform with vendor information (admin only). Optional: ?vendor=id to filter by vendor.
 // @access  Private (admin)
 router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
   try {
-    const { page, limit } = req.query;
+    const { page, limit, vendor } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
     const skip = (pageNum - 1) * limitNum;
 
+    const filter = {};
+    if (vendor && typeof vendor === 'string' && vendor.trim()) {
+      filter.vendor = vendor.trim();
+    }
+
     const [total, products] = await Promise.all([
-      Product.countDocuments({}),
-      Product.find({})
+      Product.countDocuments(filter),
+      Product.find(filter)
         .populate('vendor', 'name email')
         .sort({ createdAt: -1 })
         .skip(skip)

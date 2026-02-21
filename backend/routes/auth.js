@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 const PASSWORD_RULES = [
   { test: (p) => p.length >= 8, message: 'At least 8 characters' },
@@ -41,6 +41,22 @@ router.get('/check-email', async (req, res) => {
   } catch (error) {
     console.error('GET /api/auth/check-email error:', error.message || error);
     res.status(500).json({ success: false, message: 'Unable to check email' });
+  }
+});
+
+// @route   GET /api/auth/vendors
+// @desc    List all vendors (admin only) for filter dropdowns
+// @access  Private (admin)
+router.get('/vendors', protect, authorize('admin'), async (req, res) => {
+  try {
+    const vendors = await User.find({ role: 'vendor' })
+      .select('_id name email')
+      .sort({ name: 1 })
+      .lean();
+    res.json({ success: true, data: vendors });
+  } catch (error) {
+    console.error('GET /api/auth/vendors error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Server error while fetching vendors' });
   }
 });
 

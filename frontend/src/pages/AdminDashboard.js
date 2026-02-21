@@ -56,16 +56,29 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [vendors, setVendors] = useState([]);
+  const [vendorFilter, setVendorFilter] = useState('');
+
+  const fetchVendors = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/auth/vendors');
+      setVendors(res.data.data || []);
+    } catch (err) {
+      setVendors([]);
+    }
+  }, []);
 
   const fetchProducts = useCallback(async () => {
     try {
-      const res = await axios.get('/api/products/admin/all?limit=100');
+      const params = new URLSearchParams({ limit: '100' });
+      if (vendorFilter) params.set('vendor', vendorFilter);
+      const res = await axios.get(`/api/products/admin/all?${params.toString()}`);
       setProducts(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load products');
       setProducts([]);
     }
-  }, []);
+  }, [vendorFilter]);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -82,12 +95,12 @@ const AdminDashboard = () => {
     const load = async () => {
       setLoading(true);
       setError('');
-      await Promise.all([fetchProducts(), fetchOrders()]);
+      await Promise.all([fetchProducts(), fetchOrders(), fetchVendors()]);
       if (!cancelled) setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [fetchProducts, fetchOrders]);
+  }, [fetchProducts, fetchOrders, fetchVendors]);
 
   const adminStats = useMemo(() => {
     const pending = orders.filter((o) => o.status === 'pending').length;
@@ -422,6 +435,22 @@ const AdminDashboard = () => {
                     <div className="vendor-products-section">
                       <div className="vendor-products-header">
                         <h2 className="vendor-products-heading">All products on the platform</h2>
+                      </div>
+                      <div className="vendor-products-filters">
+                        <label htmlFor="admin-vendor-filter" className="vendor-filter-label">Filter by vendor:</label>
+                        <select
+                          id="admin-vendor-filter"
+                          className="vendor-filter-select"
+                          value={vendorFilter}
+                          onChange={(e) => setVendorFilter(e.target.value)}
+                        >
+                          <option value="">All vendors</option>
+                          {vendors.map((v) => (
+                            <option key={v._id} value={v._id}>
+                              {v.name || v.email || v._id}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       {products.length === 0 ? (
                         <p className="vendor-dashboard-overview-text">No products on the platform yet.</p>
