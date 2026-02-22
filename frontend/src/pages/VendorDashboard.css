@@ -260,6 +260,15 @@
   background: #2563eb;
 }
 
+.vendor-btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.vendor-btn-danger:hover {
+  background: #b91c1c;
+}
+
 .vendor-kpi-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

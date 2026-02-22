@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema({
     enum: ['customer', 'vendor', 'admin'],
     default: 'customer'
   },
+  isBlocked: {
+    type: Boolean,
+    default: false
+  },
   cart: [{
     product: {
       type: mongoose.Schema.Types.ObjectId,

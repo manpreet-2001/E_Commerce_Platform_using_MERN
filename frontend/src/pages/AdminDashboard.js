@@ -44,6 +44,7 @@ const ADMIN_SIDEBAR_NAV = [
   { id: 'overview', label: 'Overview', icon: '🏠' },
   { id: 'products', label: 'All Products', icon: '🛒' },
   { id: 'orders', label: 'Order Management', icon: '📋' },
+  { id: 'users', label: 'User Management', icon: '👥' },
   { id: 'analytics', label: 'Analytics', icon: '📈' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
 ];
@@ -60,6 +61,11 @@ const AdminDashboard = () => {
   const [vendorFilter, setVendorFilter] = useState('');
   const [productSearchInput, setProductSearchInput] = useState('');
   const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [users, setUsers] = useState([]);
+  const [userRoleFilter, setUserRoleFilter] = useState('');
+  const [userSearchInput, setUserSearchInput] = useState('');
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [updatingUserId, setUpdatingUserId] = useState(null);
 
   // Debounce search: update query 400ms after user stops typing
   useEffect(() => {
@@ -68,6 +74,13 @@ const AdminDashboard = () => {
     }, 400);
     return () => clearTimeout(t);
   }, [productSearchInput]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setUserSearchQuery(userSearchInput.trim());
+    }, 400);
+    return () => clearTimeout(t);
+  }, [userSearchInput]);
 
   const fetchVendors = useCallback(async () => {
     try {
@@ -106,12 +119,12 @@ const AdminDashboard = () => {
     const load = async () => {
       setLoading(true);
       setError('');
-      await Promise.all([fetchProducts(), fetchOrders(), fetchVendors()]);
+      await Promise.all([fetchProducts(), fetchOrders(), fetchVendors(), fetchUsers()]);
       if (!cancelled) setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [fetchProducts, fetchOrders, fetchVendors]);
+  }, [fetchProducts, fetchOrders, fetchVendors, fetchUsers]);
 
   const adminStats = useMemo(() => {
     const pending = orders.filter((o) => o.status === 'pending').length;
@@ -162,6 +175,32 @@ const AdminDashboard = () => {
       setError(err.response?.data?.message || 'Failed to update status');
     } finally {
       setUpdatingOrderId(null);
+    }
+  };
+
+  const handleBlockUser = async (userId) => {
+    setUpdatingUserId(userId);
+    setError('');
+    try {
+      await axios.patch(`/api/users/${userId}/block`);
+      await fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to block user');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleUnblockUser = async (userId) => {
+    setUpdatingUserId(userId);
+    setError('');
+    try {
+      await axios.patch(`/api/users/${userId}/unblock`);
+      await fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to unblock user');
+    } finally {
+      setUpdatingUserId(null);
     }
   };
 
@@ -427,18 +466,18 @@ const AdminDashboard = () => {
               <>
                 <div className="vendor-content-header">
                   <h1 className="vendor-dashboard-title">
-                    {activeTab === 'products' ? 'All Products' : 'Order Management'}
+                    {activeTab === 'products' ? 'All Products' : activeTab === 'orders' ? 'Order Management' : 'User Management'}
                   </h1>
                   <p className="vendor-dashboard-greeting">Hello, {displayName}</p>
                 </div>
                 <div className="vendor-stats vendor-stats-two">
                   <div className="vendor-stat-card">
-                    <span className="vendor-stat-value">{products.length}</span>
-                    <span className="vendor-stat-label">Products</span>
+                    <span className="vendor-stat-value">{activeTab === 'users' ? users.length : products.length}</span>
+                    <span className="vendor-stat-label">{activeTab === 'users' ? 'Users' : 'Products'}</span>
                   </div>
                   <div className="vendor-stat-card">
-                    <span className="vendor-stat-value">{orders.length}</span>
-                    <span className="vendor-stat-label">Orders</span>
+                    <span className="vendor-stat-value">{activeTab === 'users' ? users.filter((u) => u.isBlocked).length : orders.length}</span>
+                    <span className="vendor-stat-label">{activeTab === 'users' ? 'Blocked' : 'Orders'}</span>
                   </div>
                 </div>
                 <div className="vendor-dashboard-content">
@@ -507,6 +546,104 @@ const AdminDashboard = () => {
                               </div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                      <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                    </div>
+                  )}
+                  {activeTab === 'users' && (
+                    <div className="vendor-orders-section">
+                      <h2 className="vendor-orders-heading">All users</h2>
+                      <div className="vendor-products-filters">
+                        <label htmlFor="admin-user-role" className="vendor-filter-label">Role:</label>
+                        <select
+                          id="admin-user-role"
+                          className="vendor-filter-select"
+                          value={userRoleFilter}
+                          onChange={(e) => setUserRoleFilter(e.target.value)}
+                        >
+                          <option value="">All roles</option>
+                          <option value="customer">Customer</option>
+                          <option value="vendor">Vendor</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <label htmlFor="admin-user-search" className="vendor-filter-label">Search:</label>
+                        <input
+                          id="admin-user-search"
+                          type="search"
+                          className="vendor-search-input"
+                          placeholder="Name or email..."
+                          value={userSearchInput}
+                          onChange={(e) => setUserSearchInput(e.target.value)}
+                          aria-label="Search users by name or email"
+                        />
+                        {userSearchInput && (
+                          <button
+                            type="button"
+                            className="vendor-search-clear"
+                            onClick={() => setUserSearchInput('')}
+                            aria-label="Clear search"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      {users.length === 0 ? (
+                        <p className="vendor-dashboard-overview-text">No users match your filters.</p>
+                      ) : (
+                        <div className="vendor-orders-table-wrap">
+                          <table className="vendor-orders-table">
+                            <thead>
+                              <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {users.map((u) => (
+                                <tr key={u._id}>
+                                  <td>{u.name || '—'}</td>
+                                  <td>{u.email || '—'}</td>
+                                  <td>
+                                    <span className="vendor-order-pill vendor-order-pill-delivered">{u.role}</span>
+                                  </td>
+                                  <td>
+                                    <span className={u.isBlocked ? 'vendor-order-pill vendor-order-pill-cancelled' : 'vendor-order-pill vendor-order-pill-delivered'}>
+                                      {u.isBlocked ? 'Blocked' : 'Active'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {u._id === user?.id ? (
+                                      <span className="vendor-order-updating">(You)</span>
+                                    ) : updatingUserId === u._id ? (
+                                      <span className="vendor-order-updating">Updating…</span>
+                                    ) : u.isBlocked ? (
+                                      <button
+                                        type="button"
+                                        className="vendor-btn vendor-btn-secondary"
+                                        onClick={() => handleUnblockUser(u._id)}
+                                        disabled={updatingUserId !== null}
+                                      >
+                                        Unblock
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="vendor-btn vendor-btn-danger"
+                                        onClick={() => handleBlockUser(u._id)}
+                                        disabled={updatingUserId !== null}
+                                      >
+                                        Block
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                       <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
