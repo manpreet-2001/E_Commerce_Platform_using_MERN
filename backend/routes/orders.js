@@ -42,19 +42,64 @@ async function getProductIdsByVendor(vendorId) {
 }
 
 // @route   GET /api/orders/admin/all
-// @desc    Get all orders on the platform (admin only)
+// @desc    Get all orders on the platform (admin only). Optional: ?status=, ?vendor=, ?sort=, ?search=
 // @access  Private (admin)
 router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
   try {
-    const orders = await Order.find({})
+    const { status, vendor, sort, search } = req.query;
+
+    const filter = {};
+
+    if (status && typeof status === 'string' && ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].includes(status.trim())) {
+      filter.status = status.trim();
+    }
+
+    if (vendor && typeof vendor === 'string' && vendor.trim()) {
+      const vendorProductIds = await Product.find({ vendor: vendor.trim() }).select('_id').lean();
+      const ids = vendorProductIds.map((p) => p._id);
+      if (ids.length > 0) {
+        filter['items.product'] = { $in: ids };
+      } else {
+        filter['items.product'] = { $in: [] };
+      }
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      const term = search.trim();
+      const users = await User.find({
+        $or: [
+          { name: { $regex: term, $options: 'i' } },
+          { email: { $regex: term, $options: 'i' } }
+        ]
+      })
+        .select('_id')
+        .lean();
+      const userIds = users.map((u) => u._id);
+      if (userIds.length > 0) {
+        filter.user = { $in: userIds };
+      } else {
+        filter.user = { $in: [] };
+      }
+    }
+
+    let sortOption = { createdAt: -1 };
+    const sortVal = typeof sort === 'string' ? sort.trim().toLowerCase() : '';
+    if (sortVal === 'dateasc' || sortVal === 'date_asc') sortOption = { createdAt: 1 };
+    else if (sortVal === 'datedesc' || sortVal === 'date_desc') sortOption = { createdAt: -1 };
+    else if (sortVal === 'totalasc' || sortVal === 'total_asc') sortOption = { totalAmount: 1 };
+    else if (sortVal === 'totaldesc' || sortVal === 'total_desc') sortOption = { totalAmount: -1 };
+    else if (sortVal === 'status') sortOption = { status: 1, createdAt: -1 };
+
+    const orders = await Order.find(filter)
       .populate('user', 'name email')
       .populate({
         path: 'items.product',
         select: 'name price image vendor category',
         populate: { path: 'vendor', select: 'name email' }
       })
-      .sort({ createdAt: -1 })
+      .sort(sortOption)
       .lean();
+
     res.json({ success: true, count: orders.length, data: orders });
   } catch (error) {
     console.error('GET /api/orders/admin/all error:', error.message || error);

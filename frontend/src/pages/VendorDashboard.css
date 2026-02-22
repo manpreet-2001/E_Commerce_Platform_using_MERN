@@ -422,6 +422,12 @@
 .vendor-order-pill-delivered { background: #d1fae5; color: #065f46; }
 .vendor-order-pill-cancelled { background: #fee2e2; color: #991b1b; }
 
+.admin-orders-table .admin-order-customer-name { font-weight: 500; color: #0f172a; }
+.admin-orders-table .admin-order-customer-email { font-size: 0.8125rem; color: #64748b; }
+.admin-orders-table .admin-order-vendors-cell { max-width: 160px; font-size: 0.875rem; }
+.admin-order-items-inline { list-style: none; margin: 0; padding: 0; font-size: 0.8125rem; }
+.admin-order-items-inline li { margin: 2px 0; }
+
 .vendor-notification-list {
   list-style: none;
   padding: 0;

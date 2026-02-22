@@ -76,6 +76,11 @@ const AdminDashboard = () => {
   const [productFormError, setProductFormError] = useState('');
   const [adminProductVendorId, setAdminProductVendorId] = useState('');
   const [deletingProductId, setDeletingProductId] = useState(null);
+  const [orderStatusFilter, setOrderStatusFilter] = useState('');
+  const [orderVendorFilter, setOrderVendorFilter] = useState('');
+  const [orderSort, setOrderSort] = useState('dateDesc');
+  const [orderSearchInput, setOrderSearchInput] = useState('');
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
 
   // Debounce search: update query 400ms after user stops typing
   useEffect(() => {
@@ -91,6 +96,13 @@ const AdminDashboard = () => {
     }, 400);
     return () => clearTimeout(t);
   }, [userSearchInput]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setOrderSearchQuery(orderSearchInput.trim());
+    }, 400);
+    return () => clearTimeout(t);
+  }, [orderSearchInput]);
 
   const fetchVendors = useCallback(async () => {
     try {
@@ -116,13 +128,18 @@ const AdminDashboard = () => {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await axios.get('/api/orders/admin/all');
+      const params = new URLSearchParams();
+      if (orderStatusFilter) params.set('status', orderStatusFilter);
+      if (orderVendorFilter) params.set('vendor', orderVendorFilter);
+      if (orderSort) params.set('sort', orderSort);
+      if (orderSearchQuery) params.set('search', orderSearchQuery);
+      const res = await axios.get(`/api/orders/admin/all?${params.toString()}`);
       setOrders(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load orders');
       setOrders([]);
     }
-  }, []);
+  }, [orderStatusFilter, orderVendorFilter, orderSort, orderSearchQuery]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -1016,49 +1033,135 @@ const AdminDashboard = () => {
                   {activeTab === 'orders' && (
                     <div className="vendor-orders-section">
                       <h2 className="vendor-orders-heading">All orders on the platform</h2>
-                      {orders.length === 0 ? (
-                        <p className="vendor-dashboard-overview-text">No orders yet.</p>
-                      ) : (
-                        <div className="vendor-orders-list">
-                          {orders.map((order) => (
-                            <div key={order._id} className="vendor-order-card">
-                              <div className="vendor-order-card-header">
-                                <span className="vendor-order-id">Order #{order._id.slice(-6).toUpperCase()}</span>
-                                <span className={`vendor-order-status vendor-order-status-${order.status}`}>{order.status}</span>
-                              </div>
-                              <p className="vendor-order-date">
-                                {order.createdAt ? new Date(order.createdAt).toLocaleString() : ''}
-                              </p>
-                              <p className="vendor-order-customer">
-                                Customer: {order.user?.name || order.user?.email || '—'}
-                              </p>
-                              <ul className="vendor-order-items">
-                                {order.items?.map((item, idx) => (
-                                  <li key={idx} className="vendor-order-item">
-                                    {item.product?.name} × {item.quantity} @ {formatPrice(item.price)} = {formatPrice((item.price || 0) * (item.quantity || 0))}
-                                  </li>
-                                ))}
-                              </ul>
-                              <div className="vendor-order-footer">
-                                <span className="vendor-order-subtotal">Total: {formatPrice(order.totalAmount || 0)}</span>
-                                <div className="vendor-order-actions">
-                                  <label htmlFor={`status-${order._id}`} className="vendor-order-status-label">Status:</label>
-                                  <select
-                                    id={`status-${order._id}`}
-                                    className="vendor-order-status-select"
-                                    value={order.status}
-                                    onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
-                                    disabled={updatingOrderId === order._id}
-                                  >
-                                    {ORDER_STATUSES.map((s) => (
-                                      <option key={s.value} value={s.value}>{s.label}</option>
-                                    ))}
-                                  </select>
-                                  {updatingOrderId === order._id && <span className="vendor-order-updating">Updating…</span>}
-                                </div>
-                              </div>
-                            </div>
+                      <div className="vendor-products-filters">
+                        <label htmlFor="admin-order-status" className="vendor-filter-label">Status:</label>
+                        <select
+                          id="admin-order-status"
+                          className="vendor-filter-select"
+                          value={orderStatusFilter}
+                          onChange={(e) => setOrderStatusFilter(e.target.value)}
+                        >
+                          <option value="">All statuses</option>
+                          {ORDER_STATUSES.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
                           ))}
+                        </select>
+                        <label htmlFor="admin-order-vendor" className="vendor-filter-label">Vendor:</label>
+                        <select
+                          id="admin-order-vendor"
+                          className="vendor-filter-select"
+                          value={orderVendorFilter}
+                          onChange={(e) => setOrderVendorFilter(e.target.value)}
+                        >
+                          <option value="">All vendors</option>
+                          {vendors.map((v) => (
+                            <option key={v._id} value={v._id}>{v.name || v.email || v._id}</option>
+                          ))}
+                        </select>
+                        <label htmlFor="admin-order-sort" className="vendor-filter-label">Sort:</label>
+                        <select
+                          id="admin-order-sort"
+                          className="vendor-filter-select"
+                          value={orderSort}
+                          onChange={(e) => setOrderSort(e.target.value)}
+                        >
+                          <option value="dateDesc">Newest first</option>
+                          <option value="dateAsc">Oldest first</option>
+                          <option value="totalDesc">Total (high → low)</option>
+                          <option value="totalAsc">Total (low → high)</option>
+                          <option value="status">Status (A–Z)</option>
+                        </select>
+                        <label htmlFor="admin-order-search" className="vendor-filter-label">Customer:</label>
+                        <input
+                          id="admin-order-search"
+                          type="search"
+                          className="vendor-search-input"
+                          placeholder="Name or email..."
+                          value={orderSearchInput}
+                          onChange={(e) => setOrderSearchInput(e.target.value)}
+                          aria-label="Search orders by customer name or email"
+                        />
+                        {(orderSearchInput || orderStatusFilter || orderVendorFilter) && (
+                          <button
+                            type="button"
+                            className="vendor-search-clear"
+                            onClick={() => {
+                              setOrderSearchInput('');
+                              setOrderStatusFilter('');
+                              setOrderVendorFilter('');
+                            }}
+                            aria-label="Clear filters"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      {orders.length === 0 ? (
+                        <p className="vendor-dashboard-overview-text">No orders match your filters.</p>
+                      ) : (
+                        <div className="vendor-orders-table-wrap">
+                          <table className="vendor-orders-table admin-orders-table">
+                            <thead>
+                              <tr>
+                                <th>Order</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Vendors</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {orders.map((order) => {
+                                const vendorNames = [...new Set((order.items || [])
+                                  .map((i) => i.product?.vendor?.name || i.product?.vendor?.email || '—')
+                                  .filter(Boolean))];
+                                const vendorList = vendorNames.length ? vendorNames.join(', ') : '—';
+                                return (
+                                  <tr key={order._id}>
+                                    <td>#{order._id.slice(-6).toUpperCase()}</td>
+                                    <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString(undefined, { dateStyle: 'short' }) + ' ' + new Date(order.createdAt).toLocaleTimeString(undefined, { timeStyle: 'short' }) : '—'}</td>
+                                    <td>
+                                      <span className="admin-order-customer-name">{order.user?.name || '—'}</span>
+                                      <br />
+                                      <span className="admin-order-customer-email">{order.user?.email || '—'}</span>
+                                    </td>
+                                    <td className="admin-order-vendors-cell">{vendorList}</td>
+                                    <td>
+                                      <ul className="admin-order-items-inline">
+                                        {(order.items || []).slice(0, 3).map((item, idx) => (
+                                          <li key={idx}>{item.product?.name} × {item.quantity}</li>
+                                        ))}
+                                        {(order.items || []).length > 3 && (
+                                          <li>+{(order.items || []).length - 3} more</li>
+                                        )}
+                                      </ul>
+                                    </td>
+                                    <td>{formatPrice(order.totalAmount || 0)}</td>
+                                    <td>
+                                      <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>{order.status}</span>
+                                    </td>
+                                    <td>
+                                      <select
+                                        className="vendor-order-status-select"
+                                        value={order.status}
+                                        onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
+                                        disabled={updatingOrderId === order._id}
+                                        aria-label={`Change status for order ${order._id.slice(-6)}`}
+                                      >
+                                        {ORDER_STATUSES.map((s) => (
+                                          <option key={s.value} value={s.value}>{s.label}</option>
+                                        ))}
+                                      </select>
+                                      {updatingOrderId === order._id && <span className="vendor-order-updating">…</span>}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                       <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
