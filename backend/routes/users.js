@@ -86,4 +86,42 @@ router.patch('/:id/unblock', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+// @route   PATCH /api/users/:id/role
+// @desc    Update a user's role (admin only). Admin cannot change their own role.
+// @access  Private (admin)
+router.patch('/:id/role', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (req.user._id.toString() === id) {
+      return res.status(400).json({ success: false, message: 'You cannot change your own role' });
+    }
+
+    const validRoles = ['customer', 'vendor', 'admin'];
+    const newRole = typeof role === 'string' ? role.trim().toLowerCase() : '';
+    if (!validRoles.includes(newRole)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be customer, vendor, or admin.'
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { role: newRole },
+      { new: true, runValidators: true }
+    ).select('name email role isBlocked').lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, data: user, message: 'Role updated' });
+  } catch (error) {
+    console.error('PATCH /api/users/:id/role error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Failed to update role' });
+  }
+});
+
 module.exports = router;

@@ -82,7 +82,7 @@ const Navbar = () => {
             {isAdmin && (
               <li className="nav-item">
                 <Link to="/admin" className={`nav-link ${location.pathname === '/admin' ? 'active' : ''}`}>
-                  Admin
+                  Dashboard
                 </Link>
               </li>
             )}
@@ -124,7 +124,7 @@ const Navbar = () => {
                       onClick={() => setUserMenuOpen((o) => !o)}
                       aria-expanded={userMenuOpen}
                       aria-haspopup="true"
-                      aria-label={isVendor ? 'User menu (Dashboard, Logout)' : isAdmin ? 'User menu (Admin, Logout)' : 'User menu (Profile, Orders, Logout)'}
+                      aria-label={isVendor ? 'User menu (Dashboard, Logout)' : isAdmin ? 'User menu (Dashboard, Logout)' : 'User menu (Profile, Orders, Logout)'}
                     >
                       <span className="nav-hamburger-icon" aria-hidden="true" title="Menu">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

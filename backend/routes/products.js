@@ -192,11 +192,22 @@ router.get('/:id', async (req, res) => {
 });
 
 // @route   POST /api/products
-// @desc    Create a product
+// @desc    Create a product. Admin must provide vendor in body; vendor uses own id.
 // @access  Private (vendor, admin)
 router.post('/', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {
-    const { name, description, price, category, image, images, stock } = req.body;
+    const { name, description, price, category, image, images, stock, vendor: bodyVendor } = req.body;
+
+    let vendorId = req.user._id;
+    if (req.user.role === 'admin') {
+      if (!bodyVendor || (typeof bodyVendor !== 'string' && !bodyVendor._id)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Vendor is required when creating a product as admin. Select a vendor.'
+        });
+      }
+      vendorId = typeof bodyVendor === 'string' ? bodyVendor.trim() : bodyVendor._id;
+    }
 
     const imageList = Array.isArray(images) ? images.filter(Boolean).map((s) => String(s).trim()) : [];
     const primaryImage = imageList[0] || (image != null ? String(image).trim() : '') || '';
@@ -208,7 +219,7 @@ router.post('/', protect, authorize('vendor', 'admin'), async (req, res) => {
       category,
       image: primaryImage,
       images: imageList.length ? imageList : (primaryImage ? [primaryImage] : []),
-      vendor: req.user._id,
+      vendor: vendorId,
       stock: stock !== undefined ? stock : 0
     });
 
@@ -256,7 +267,7 @@ router.put('/:id', protect, async (req, res) => {
       });
     }
 
-    const { name, description, price, category, image, images, stock } = req.body;
+    const { name, description, price, category, image, images, stock, vendor: bodyVendor } = req.body;
 
     const updates = {};
     if (name !== undefined) updates.name = name;
@@ -264,6 +275,10 @@ router.put('/:id', protect, async (req, res) => {
     if (price !== undefined) updates.price = price;
     if (category !== undefined) updates.category = category;
     if (stock !== undefined) updates.stock = stock;
+    if (req.user.role === 'admin' && bodyVendor !== undefined) {
+      const vid = typeof bodyVendor === 'string' ? bodyVendor.trim() : bodyVendor?._id;
+      if (vid) updates.vendor = vid;
+    }
 
     if (images !== undefined) {
       const imageList = Array.isArray(images) ? images.filter(Boolean).map((s) => String(s).trim()) : [];

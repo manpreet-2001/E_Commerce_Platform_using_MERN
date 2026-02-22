@@ -4,6 +4,8 @@ import axios from 'axios';
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -17,6 +19,7 @@ import {
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/imageUrl';
+import VendorProductForm from '../components/VendorProductForm';
 import './VendorDashboard.css';
 
 const CATEGORY_LABELS = {
@@ -66,6 +69,13 @@ const AdminDashboard = () => {
   const [userSearchInput, setUserSearchInput] = useState('');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [updatingUserId, setUpdatingUserId] = useState(null);
+  const [updatingRoleUserId, setUpdatingRoleUserId] = useState(null);
+  const [productFormOpen, setProductFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productFormLoading, setProductFormLoading] = useState(false);
+  const [productFormError, setProductFormError] = useState('');
+  const [adminProductVendorId, setAdminProductVendorId] = useState('');
+  const [deletingProductId, setDeletingProductId] = useState(null);
 
   // Debounce search: update query 400ms after user stops typing
   useEffect(() => {
@@ -142,6 +152,24 @@ const AdminDashboard = () => {
   const adminStats = useMemo(() => {
     const pending = orders.filter((o) => o.status === 'pending').length;
     const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const completedOrders = orders.filter((o) => o.status === 'delivered' || o.status === 'shipped');
+    const completedRevenue = completedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+
+    const now = new Date();
+    const last7Start = new Date(now);
+    last7Start.setDate(last7Start.getDate() - 6);
+    last7Start.setHours(0, 0, 0, 0);
+    const prev7Start = new Date(last7Start);
+    prev7Start.setDate(prev7Start.getDate() - 7);
+    const last7Orders = orders.filter((o) => o.createdAt && new Date(o.createdAt) >= last7Start);
+    const prev7Orders = orders.filter((o) => o.createdAt && new Date(o.createdAt) >= prev7Start && new Date(o.createdAt) < last7Start);
+    const revenueLast7Days = last7Orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const revenuePrev7Days = prev7Orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const revenueTrendPercent = revenuePrev7Days > 0
+      ? Math.round(((revenueLast7Days - revenuePrev7Days) / revenuePrev7Days) * 100)
+      : (revenueLast7Days > 0 ? 100 : 0);
+
     const ordersByStatus = {};
     orders.forEach((o) => { ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1; });
     const ordersByStatusData = Object.entries(ordersByStatus).map(([name, value]) => ({
@@ -149,8 +177,8 @@ const AdminDashboard = () => {
       value,
       fill: ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ef4444'][Object.keys(ordersByStatus).indexOf(name) % 5] || '#94a3b8'
     }));
+
     const dayMap = {};
-    const now = new Date();
     for (let i = 29; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
@@ -165,13 +193,55 @@ const AdminDashboard = () => {
       }
     });
     const ordersByDay = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
+
+    const productRevenueMap = {};
+    const productQuantityMap = {};
+    orders.forEach((o) => {
+      if (o.status === 'cancelled') return;
+      (o.items || []).forEach((item) => {
+        const id = item.product?._id?.toString() || item.product || 'unknown';
+        const name = item.product?.name || 'Unknown product';
+        const rev = (item.price || 0) * (item.quantity || 0);
+        productRevenueMap[id] = (productRevenueMap[id] || { name, revenue: 0, quantity: 0 });
+        productRevenueMap[id].name = name;
+        productRevenueMap[id].revenue += rev;
+        productRevenueMap[id].quantity += item.quantity || 0;
+      });
+    });
+    const topProductsByRevenue = Object.values(productRevenueMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 8);
+
+    const categoryRevenueMap = {};
+    orders.forEach((o) => {
+      if (o.status === 'cancelled') return;
+      (o.items || []).forEach((item) => {
+        const cat = item.product?.category || 'other';
+        const rev = (item.price || 0) * (item.quantity || 0);
+        categoryRevenueMap[cat] = (categoryRevenueMap[cat] || 0) + rev;
+      });
+    });
+    const CATEGORY_COLORS = { electronics: '#3b82f6', phones: '#10b981', laptops: '#f59e0b', accessories: '#6366f1', audio: '#ec4899', gaming: '#14b8a6', other: '#94a3b8' };
+    const salesByCategoryData = Object.entries(categoryRevenueMap).map(([name, value]) => ({
+      name: CATEGORY_LABELS[name] || name,
+      value: Math.round(value * 100) / 100,
+      fill: CATEGORY_COLORS[name] || '#94a3b8'
+    })).sort((a, b) => b.value - a.value);
+
     return {
       totalProducts: products.length,
       totalOrders: orders.length,
       pendingOrders: pending,
       totalRevenue,
+      completedRevenue,
+      averageOrderValue,
+      revenueLast7Days,
+      revenuePrev7Days,
+      revenueTrendPercent,
       ordersByStatusData,
-      ordersByDay
+      ordersByDay,
+      topProductsByRevenue,
+      salesByCategoryData
     };
   }, [products.length, orders]);
 
@@ -185,7 +255,7 @@ const AdminDashboard = () => {
       await axios.patch(`/api/orders/${orderId}/status`, { status: newStatus });
       await fetchOrders();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update status');
+      setError(err.response?.data?.message || 'Failed to update order status. Please try again.');
     } finally {
       setUpdatingOrderId(null);
     }
@@ -211,9 +281,85 @@ const AdminDashboard = () => {
       await axios.patch(`/api/users/${userId}/unblock`);
       await fetchUsers();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to unblock user');
+      setError(err.response?.data?.message || 'Failed to unblock user. Please try again.');
     } finally {
       setUpdatingUserId(null);
+    }
+  };
+
+  const handleRoleChange = async (userId, newRole) => {
+    if (!newRole || newRole === '') return;
+    setUpdatingRoleUserId(userId);
+    setError('');
+    try {
+      await axios.patch(`/api/users/${userId}/role`, { role: newRole });
+      await fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update role. Please try again.');
+    } finally {
+      setUpdatingRoleUserId(null);
+    }
+  };
+
+  const openAddProduct = () => {
+    setEditingProduct(null);
+    setProductFormError('');
+    setAdminProductVendorId(vendors[0]?._id || '');
+    setProductFormOpen(true);
+  };
+
+  const openEditProduct = (product) => {
+    setEditingProduct(product);
+    const vendorId = product.vendor?._id || product.vendor || '';
+    setAdminProductVendorId(vendorId);
+    setProductFormError('');
+    setProductFormOpen(true);
+  };
+
+  const closeProductForm = () => {
+    setProductFormOpen(false);
+    setEditingProduct(null);
+    setProductFormError('');
+  };
+
+  const handleProductFormSubmit = async (payload) => {
+    if (payload.imageError) {
+      setProductFormError(payload.imageError);
+      return;
+    }
+    setProductFormLoading(true);
+    setProductFormError('');
+    try {
+      if (editingProduct?._id) {
+        await axios.put(`/api/products/${editingProduct._id}`, { ...payload, vendor: adminProductVendorId });
+      } else {
+        if (!adminProductVendorId) {
+          setProductFormError('Please select a vendor for this product.');
+          setProductFormLoading(false);
+          return;
+        }
+        await axios.post('/api/products', { ...payload, vendor: adminProductVendorId });
+      }
+      closeProductForm();
+      fetchProducts();
+    } catch (err) {
+      setProductFormError(err.response?.data?.message || (editingProduct?._id ? 'Update failed.' : 'Add failed.'));
+    } finally {
+      setProductFormLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (product) => {
+    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    setDeletingProductId(product._id);
+    setError('');
+    try {
+      await axios.delete(`/api/products/${product._id}`);
+      await fetchProducts();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete product. Please try again.');
+    } finally {
+      setDeletingProductId(null);
     }
   };
 
@@ -246,7 +392,19 @@ const AdminDashboard = () => {
 
         <main className="vendor-dashboard-main">
           <div className="vendor-dashboard-inner">
-            {error && <div className="vendor-dashboard-error">{error}</div>}
+            {error && (
+              <div className="vendor-dashboard-error" role="alert">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  className="vendor-dashboard-error-dismiss"
+                  onClick={() => setError('')}
+                  aria-label="Dismiss error"
+                >
+                  ×
+                </button>
+              </div>
+            )}
 
             {loading ? (
               <div className="vendor-dashboard-loading">Loading…</div>
@@ -388,85 +546,184 @@ const AdminDashboard = () => {
               </div>
             ) : activeTab === 'analytics' ? (
               <div className="vendor-analytics-page" data-section="analytics">
-                <div className="vendor-content-header">
-                  <h1 className="vendor-dashboard-title">Analytics</h1>
-                  <p className="vendor-dashboard-greeting">Platform-wide charts and statistics.</p>
+                <div className="vendor-analytics-header">
+                  <div>
+                    <h1 className="vendor-dashboard-title">Platform Analytics</h1>
+                    <p className="vendor-dashboard-greeting">Sales and performance over the last 30 days.</p>
+                  </div>
+                  <Link to="/products" className="vendor-btn vendor-btn-secondary">View Store</Link>
                 </div>
-                <div className="vendor-kpi-cards">
-                  <div className="vendor-kpi-card">
-                    <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{adminStats.totalProducts}</span>
-                      <span className="vendor-kpi-badge">Active</span>
+
+                <section className="vendor-analytics-section" aria-labelledby="analytics-sales-overview">
+                  <h2 id="analytics-sales-overview" className="vendor-analytics-section-title">Sales overview</h2>
+                  <div className="vendor-kpi-cards vendor-kpi-cards-wrap">
+                    <div className="vendor-kpi-card">
+                      <div className="vendor-kpi-top">
+                        <span className="vendor-kpi-value">{formatPrice(adminStats.totalRevenue)}</span>
+                        <span className="vendor-kpi-badge vendor-kpi-badge-success">All time</span>
+                      </div>
+                      <span className="vendor-kpi-label">Total revenue</span>
                     </div>
-                    <span className="vendor-kpi-label">Total products</span>
-                  </div>
-                  <div className="vendor-kpi-card">
-                    <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{adminStats.totalOrders}</span>
-                      <span className="vendor-kpi-badge">All time</span>
+                    <div className="vendor-kpi-card">
+                      <div className="vendor-kpi-top">
+                        <span className="vendor-kpi-value">{formatPrice(adminStats.completedRevenue)}</span>
+                        <span className="vendor-kpi-badge">Delivered / shipped</span>
+                      </div>
+                      <span className="vendor-kpi-label">Completed sales</span>
                     </div>
-                    <span className="vendor-kpi-label">Total orders</span>
-                  </div>
-                  <div className="vendor-kpi-card">
-                    <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{formatPrice(adminStats.totalRevenue)}</span>
-                      <span className="vendor-kpi-badge">Revenue</span>
+                    <div className="vendor-kpi-card">
+                      <div className="vendor-kpi-top">
+                        <span className="vendor-kpi-value">{formatPrice(adminStats.averageOrderValue)}</span>
+                        <span className="vendor-kpi-badge">AOV</span>
+                      </div>
+                      <span className="vendor-kpi-label">Average order value</span>
                     </div>
-                    <span className="vendor-kpi-label">Total revenue</span>
-                  </div>
-                  <div className="vendor-kpi-card">
-                    <div className="vendor-kpi-top">
-                      <span className="vendor-kpi-value">{adminStats.pendingOrders}</span>
-                      <span className="vendor-kpi-badge vendor-kpi-badge-warn">Needs action</span>
+                    <div className="vendor-kpi-card">
+                      <div className="vendor-kpi-top">
+                        <span className="vendor-kpi-value">{adminStats.totalOrders}</span>
+                        <span className="vendor-kpi-badge">Orders</span>
+                      </div>
+                      <span className="vendor-kpi-label">Total orders</span>
                     </div>
-                    <span className="vendor-kpi-label">Pending orders</span>
+                    <div className="vendor-kpi-card">
+                      <div className="vendor-kpi-top">
+                        <span className="vendor-kpi-value">{adminStats.revenueTrendPercent >= 0 ? `+${adminStats.revenueTrendPercent}%` : `${adminStats.revenueTrendPercent}%`}</span>
+                        <span className={`vendor-kpi-badge ${adminStats.revenueTrendPercent >= 0 ? 'vendor-kpi-badge-success' : 'vendor-kpi-badge-warn'}`}>
+                          vs last 7 days
+                        </span>
+                      </div>
+                      <span className="vendor-kpi-label">Revenue trend</span>
+                    </div>
+                    <div className="vendor-kpi-card">
+                      <div className="vendor-kpi-top">
+                        <span className="vendor-kpi-value">{adminStats.pendingOrders}</span>
+                        <span className="vendor-kpi-badge vendor-kpi-badge-warn">Action</span>
+                      </div>
+                      <span className="vendor-kpi-label">Pending orders</span>
+                    </div>
                   </div>
-                </div>
-                <div className="vendor-charts-row">
-                  <div className="vendor-chart-card">
-                    <h3 className="vendor-chart-title">Orders by status</h3>
-                    {adminStats.ordersByStatusData?.length === 0 ? (
-                      <p className="vendor-chart-empty">No order data yet</p>
-                    ) : (
+                </section>
+
+                <section className="vendor-analytics-section" aria-labelledby="analytics-charts">
+                  <h2 id="analytics-charts" className="vendor-analytics-section-title">Charts</h2>
+                  <div className="vendor-charts-row">
+                    <div className="vendor-chart-card">
+                      <h3 className="vendor-chart-title">Revenue over time (last 30 days)</h3>
                       <ResponsiveContainer width="100%" height={260}>
-                        <PieChart>
-                          <Pie
-                            data={adminStats.ordersByStatusData}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            label={({ name, value }) => `${name}: ${value}`}
-                          >
-                            {adminStats.ordersByStatusData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                          <Legend />
-                        </PieChart>
+                        <LineChart data={adminStats.ordersByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                          <Tooltip
+                            formatter={(value) => [formatPrice(value), 'Revenue']}
+                            labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ''}
+                          />
+                          <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                        </LineChart>
                       </ResponsiveContainer>
-                    )}
+                    </div>
+                    <div className="vendor-chart-card">
+                      <h3 className="vendor-chart-title">Orders by status</h3>
+                      {adminStats.ordersByStatusData?.length === 0 ? (
+                        <p className="vendor-chart-empty">No order data yet</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <PieChart>
+                            <Pie
+                              data={adminStats.ordersByStatusData}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {adminStats.ordersByStatusData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
                   </div>
-                  <div className="vendor-chart-card">
-                    <h3 className="vendor-chart-title">Orders & revenue (last 30 days)</h3>
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={adminStats.ordersByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
-                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                        <Tooltip
-                          formatter={(value, name) => (name === 'revenue' ? formatPrice(value) : value)}
-                          labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ''}
-                        />
-                        <Bar yAxisId="left" dataKey="orders" name="Orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                        <Bar yAxisId="right" dataKey="revenue" name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="vendor-charts-row">
+                    <div className="vendor-chart-card">
+                      <h3 className="vendor-chart-title">Orders & revenue (last 30 days)</h3>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={adminStats.ordersByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                          <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                          <Tooltip
+                            formatter={(value, name) => (name === 'revenue' ? formatPrice(value) : value)}
+                            labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ''}
+                          />
+                          <Bar yAxisId="left" dataKey="orders" name="Orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                          <Bar yAxisId="right" dataKey="revenue" name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="vendor-chart-card">
+                      <h3 className="vendor-chart-title">Sales by category</h3>
+                      {adminStats.salesByCategoryData?.length === 0 ? (
+                        <p className="vendor-chart-empty">No sales data yet</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <PieChart>
+                            <Pie
+                              data={adminStats.salesByCategoryData}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              label={({ name, value }) => `${name}: ${formatPrice(value)}`}
+                            >
+                              {adminStats.salesByCategoryData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(value) => formatPrice(value)} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </section>
+
+                <section className="vendor-analytics-section vendor-analytics-top-products" aria-labelledby="analytics-top-products">
+                  <h2 id="analytics-top-products" className="vendor-analytics-section-title">Top products by revenue</h2>
+                  {adminStats.topProductsByRevenue?.length === 0 ? (
+                    <p className="vendor-chart-empty">No sales data yet</p>
+                  ) : (
+                    <div className="vendor-orders-table-wrap">
+                      <table className="vendor-orders-table">
+                        <thead>
+                          <tr>
+                            <th>Product</th>
+                            <th>Units sold</th>
+                            <th>Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adminStats.topProductsByRevenue.map((row, idx) => (
+                            <tr key={idx}>
+                              <td>{row.name}</td>
+                              <td>{row.quantity}</td>
+                              <td>{formatPrice(row.revenue)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+
                 <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : activeTab === 'notifications' ? (
@@ -498,6 +755,9 @@ const AdminDashboard = () => {
                     <div className="vendor-products-section">
                       <div className="vendor-products-header">
                         <h2 className="vendor-products-heading">All products on the platform</h2>
+                        <button type="button" className="vendor-btn vendor-btn-primary" onClick={openAddProduct}>
+                          Add Product
+                        </button>
                       </div>
                       <div className="vendor-products-filters">
                         <label htmlFor="admin-vendor-filter" className="vendor-filter-label">Filter by vendor:</label>
@@ -556,9 +816,84 @@ const AdminDashboard = () => {
                                     <> · <span className="vendor-product-card-vendor">Vendor: {typeof p.vendor === 'object' ? (p.vendor.name || p.vendor.email) : '—'}</span></>
                                   )}
                                 </p>
+                                <div className="vendor-product-card-actions">
+                                  <button
+                                    type="button"
+                                    className="vendor-btn vendor-btn-secondary"
+                                    onClick={() => openEditProduct(p)}
+                                    disabled={productFormOpen}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="vendor-btn vendor-btn-danger"
+                                    onClick={() => handleDeleteProduct(p)}
+                                    disabled={deletingProductId !== null}
+                                  >
+                                    {deletingProductId === p._id ? 'Deleting…' : 'Delete'}
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                      {productFormOpen && (
+                        <div
+                          className="vendor-modal-backdrop"
+                          onClick={closeProductForm}
+                          role="presentation"
+                        >
+                          <div
+                            className="vendor-modal"
+                            onClick={(e) => e.stopPropagation()}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="admin-product-form-title"
+                          >
+                            <div className="vendor-modal-header">
+                              <h2 id="admin-product-form-title" className="vendor-modal-title">
+                                {editingProduct ? 'Edit product' : 'Add product'}
+                              </h2>
+                              <button
+                                type="button"
+                                className="vendor-modal-close"
+                                onClick={closeProductForm}
+                                aria-label="Close"
+                              >
+                                ×
+                              </button>
+                            </div>
+                            <p className="vendor-modal-desc">
+                              {editingProduct ? 'Update the details below. You can change the assigned vendor.' : 'Select a vendor and fill in the details to add a new product.'}
+                            </p>
+                            <div className="vendor-product-form-group admin-product-vendor-field" style={{ padding: '0 24px 16px' }}>
+                              <label htmlFor="admin-product-vendor">Vendor *</label>
+                              <select
+                                id="admin-product-vendor"
+                                className="vendor-filter-select"
+                                value={adminProductVendorId}
+                                onChange={(e) => setAdminProductVendorId(e.target.value)}
+                                required
+                              >
+                                <option value="">Select a vendor</option>
+                                {vendors.map((v) => (
+                                  <option key={v._id} value={v._id}>
+                                    {v.name || v.email || v._id}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <VendorProductForm
+                              key={editingProduct?._id ?? 'new'}
+                              product={editingProduct}
+                              onSubmit={handleProductFormSubmit}
+                              onCancel={closeProductForm}
+                              loading={productFormLoading}
+                              error={productFormError}
+                            />
+                          </div>
                         </div>
                       )}
                       <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
@@ -621,7 +956,23 @@ const AdminDashboard = () => {
                                   <td>{u.name || '—'}</td>
                                   <td>{u.email || '—'}</td>
                                   <td>
-                                    <span className="vendor-order-pill vendor-order-pill-delivered">{u.role}</span>
+                                    {u._id === user?.id ? (
+                                      <span className="vendor-order-pill vendor-order-pill-delivered">{u.role}</span>
+                                    ) : updatingRoleUserId === u._id ? (
+                                      <span className="vendor-order-updating">Updating…</span>
+                                    ) : (
+                                      <select
+                                        className="vendor-order-status-select vendor-user-role-select"
+                                        value={u.role}
+                                        onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                                        disabled={updatingRoleUserId !== null}
+                                        aria-label={`Change role for ${u.name || u.email}`}
+                                      >
+                                        <option value="customer">customer</option>
+                                        <option value="vendor">vendor</option>
+                                        <option value="admin">admin</option>
+                                      </select>
+                                    )}
                                   </td>
                                   <td>
                                     <span className={u.isBlocked ? 'vendor-order-pill vendor-order-pill-cancelled' : 'vendor-order-pill vendor-order-pill-delivered'}>

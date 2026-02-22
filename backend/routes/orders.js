@@ -50,7 +50,7 @@ router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
       .populate('user', 'name email')
       .populate({
         path: 'items.product',
-        select: 'name price image vendor',
+        select: 'name price image vendor category',
         populate: { path: 'vendor', select: 'name email' }
       })
       .sort({ createdAt: -1 })
