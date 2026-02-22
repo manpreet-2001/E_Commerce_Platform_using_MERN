@@ -114,6 +114,19 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (userRoleFilter) params.set('role', userRoleFilter);
+      if (userSearchQuery) params.set('search', userSearchQuery);
+      const res = await axios.get(`/api/users?${params.toString()}`);
+      setUsers(res.data.data || []);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load users');
+      setUsers([]);
+    }
+  }, [userRoleFilter, userSearchQuery]);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
