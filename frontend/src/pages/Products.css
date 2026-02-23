@@ -646,6 +646,146 @@
   color: #dc2626;
 }
 
+/* Reviews */
+.product-detail-reviews {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.product-detail-reviews-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.product-detail-reviews-avg {
+  font-size: 0.9375rem;
+  color: #64748b;
+  margin: 0 0 20px 0;
+}
+
+.product-detail-reviews-stars {
+  color: #f59e0b;
+  letter-spacing: 0.05em;
+}
+
+.product-detail-review-form {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.product-detail-review-form-title {
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 12px 0;
+}
+
+.product-detail-review-error {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin: 0 0 12px 0;
+}
+
+.product-detail-review-rating {
+  margin-bottom: 12px;
+}
+
+.product-detail-review-rating label,
+.product-detail-review-comment label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 4px;
+}
+
+.product-detail-review-select {
+  padding: 8px 12px;
+  font-size: 0.9375rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  min-width: 120px;
+}
+
+.product-detail-review-comment {
+  margin-bottom: 16px;
+}
+
+.product-detail-review-textarea {
+  width: 100%;
+  padding: 12px;
+  font-size: 0.9375rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.product-detail-review-submit {
+  margin-top: 0;
+}
+
+.product-detail-review-login {
+  font-size: 0.9375rem;
+  color: #64748b;
+  margin: 0 0 20px 0;
+}
+
+.product-detail-review-login a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.product-detail-review-login a:hover {
+  text-decoration: underline;
+}
+
+.product-detail-review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.product-detail-review-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.product-detail-review-item:last-child {
+  border-bottom: none;
+}
+
+.product-detail-review-item-stars {
+  color: #f59e0b;
+  letter-spacing: 0.05em;
+  font-size: 1rem;
+}
+
+.product-detail-review-item-meta {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin-left: 8px;
+}
+
+.product-detail-review-item-comment {
+  margin: 8px 0 0 0;
+  font-size: 0.9375rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.product-detail-review-empty {
+  font-size: 0.9375rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
 @media (max-width: 768px) {
   .product-detail {
     grid-template-columns: 1fr;

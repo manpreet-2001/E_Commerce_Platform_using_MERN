@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
+const reviewsRouter = require('./reviews');
+
+router.use('/:productId/reviews', reviewsRouter);
 
 /**
  * Check if user can modify product (owner or admin)

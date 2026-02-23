@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { getImageUrl } from '../utils/imageUrl';
 import './Products.css';
@@ -19,6 +20,7 @@ const CATEGORY_LABELS = {
 const ProductDetail = () => {
   const { id } = useParams();
   const { addToCart } = useCart();
+  const { user, isAuthenticated } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,6 +28,12 @@ const ProductDetail = () => {
   const [cartMessage, setCartMessage] = useState('');
   const [adding, setAdding] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 });
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState('');
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -44,6 +52,38 @@ const ProductDetail = () => {
 
     if (id) fetchProduct();
   }, [id]);
+
+  const fetchReviews = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await axios.get(`/api/products/${id}/reviews`);
+      setReviews(res.data.data || []);
+      setReviewStats(res.data.stats || { average: 0, count: 0 });
+    } catch {
+      setReviews([]);
+      setReviewStats({ average: 0, count: 0 });
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id && product) fetchReviews();
+  }, [id, product, fetchReviews]);
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setReviewError('');
+    setReviewSubmitting(true);
+    try {
+      await axios.post(`/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment.trim() });
+      setReviewRating(5);
+      setReviewComment('');
+      await fetchReviews();
+    } catch (err) {
+      setReviewError(err.response?.data?.message || 'Failed to submit review.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price);
@@ -196,6 +236,79 @@ const ProductDetail = () => {
                   )}
                 </div>
               )}
+
+              {/* Ratings & Reviews */}
+              <section className="product-detail-reviews" aria-labelledby="reviews-heading">
+                <h2 id="reviews-heading" className="product-detail-reviews-title">
+                  Reviews {reviewStats.count > 0 && `(${reviewStats.count})`}
+                </h2>
+                {reviewStats.count > 0 && (
+                  <p className="product-detail-reviews-avg">
+                    <span className="product-detail-reviews-stars" aria-label={`${reviewStats.average} out of 5 stars`}>
+                      {'★'.repeat(Math.round(reviewStats.average))}{'☆'.repeat(5 - Math.round(reviewStats.average))}
+                    </span>
+                    {' '}{reviewStats.average.toFixed(1)} average
+                  </p>
+                )}
+
+                {isAuthenticated() ? (
+                  <form onSubmit={handleReviewSubmit} className="product-detail-review-form">
+                    <p className="product-detail-review-form-title">Write a review</p>
+                    {reviewError && <p className="product-detail-review-error" role="alert">{reviewError}</p>}
+                    <div className="product-detail-review-rating">
+                      <label htmlFor="review-rating">Rating</label>
+                      <select
+                        id="review-rating"
+                        value={reviewRating}
+                        onChange={(e) => setReviewRating(Number(e.target.value))}
+                        required
+                        className="product-detail-review-select"
+                      >
+                        {[5, 4, 3, 2, 1].map((n) => (
+                          <option key={n} value={n}>{n} star{n !== 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="product-detail-review-comment">
+                      <label htmlFor="review-comment">Comment (optional)</label>
+                      <textarea
+                        id="review-comment"
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Share your experience with this product..."
+                        rows={3}
+                        maxLength={2000}
+                        className="product-detail-review-textarea"
+                      />
+                    </div>
+                    <button type="submit" className="btn-add-to-cart product-detail-review-submit" disabled={reviewSubmitting}>
+                      {reviewSubmitting ? 'Submitting…' : 'Submit review'}
+                    </button>
+                  </form>
+                ) : (
+                  <p className="product-detail-review-login">
+                    <Link to="/login">Sign in</Link> to leave a review.
+                  </p>
+                )}
+
+                {reviews.length > 0 ? (
+                  <ul className="product-detail-review-list">
+                    {reviews.map((r) => (
+                      <li key={r._id} className="product-detail-review-item">
+                        <span className="product-detail-review-item-stars" aria-hidden="true">
+                          {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
+                        </span>
+                        <span className="product-detail-review-item-meta">
+                          {r.user?.name || 'Customer'} · {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
+                        </span>
+                        {r.comment && <p className="product-detail-review-item-comment">{r.comment}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="product-detail-review-empty">No reviews yet. Be the first to review!</p>
+                )}
+              </section>
             </div>
           </div>
         </div>
