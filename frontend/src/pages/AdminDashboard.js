@@ -62,6 +62,7 @@ const AdminDashboard = () => {
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [vendorFilter, setVendorFilter] = useState('');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('');
   const [productSearchInput, setProductSearchInput] = useState('');
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [users, setUsers] = useState([]);
@@ -127,6 +128,7 @@ const AdminDashboard = () => {
     try {
       const params = new URLSearchParams({ limit: '100' });
       if (vendorFilter) params.set('vendor', vendorFilter);
+      if (productCategoryFilter) params.set('category', productCategoryFilter);
       if (productSearchQuery) params.set('search', productSearchQuery);
       const res = await axios.get(`/api/products/admin/all?${params.toString()}`);
       setProducts(res.data.data || []);
@@ -134,7 +136,7 @@ const AdminDashboard = () => {
       setError(err.response?.data?.message || 'Failed to load products');
       setProducts([]);
     }
-  }, [vendorFilter, productSearchQuery]);
+  }, [vendorFilter, productCategoryFilter, productSearchQuery]);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -861,7 +863,7 @@ const AdminDashboard = () => {
                         </button>
                       </div>
                       <div className="vendor-products-filters">
-                        <label htmlFor="admin-vendor-filter" className="vendor-filter-label">Filter by vendor:</label>
+                        <label htmlFor="admin-vendor-filter" className="vendor-filter-label">Vendor:</label>
                         <select
                           id="admin-vendor-filter"
                           className="vendor-filter-select"
@@ -875,22 +877,34 @@ const AdminDashboard = () => {
                             </option>
                           ))}
                         </select>
+                        <label htmlFor="admin-product-category" className="vendor-filter-label">Category:</label>
+                        <select
+                          id="admin-product-category"
+                          className="vendor-filter-select"
+                          value={productCategoryFilter}
+                          onChange={(e) => setProductCategoryFilter(e.target.value)}
+                        >
+                          <option value="">All categories</option>
+                          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
                         <label htmlFor="admin-product-search" className="vendor-filter-label">Search:</label>
                         <input
                           id="admin-product-search"
                           type="search"
                           className="vendor-search-input"
-                          placeholder="Search by name or description..."
+                          placeholder="Name or description..."
                           value={productSearchInput}
                           onChange={(e) => setProductSearchInput(e.target.value)}
                           aria-label="Search products by name or description"
                         />
-                        {productSearchInput && (
+                        {(productSearchInput || vendorFilter || productCategoryFilter) && (
                           <button
                             type="button"
                             className="vendor-search-clear"
-                            onClick={() => setProductSearchInput('')}
-                            aria-label="Clear search"
+                            onClick={() => { setProductSearchInput(''); setVendorFilter(''); setProductCategoryFilter(''); }}
+                            aria-label="Clear filters"
                           >
                             Clear
                           </button>

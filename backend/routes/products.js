@@ -83,7 +83,7 @@ router.get('/', async (req, res) => {
 // @access  Private (admin)
 router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
   try {
-    const { page, limit, vendor, search } = req.query;
+    const { page, limit, vendor, category, search } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
     const skip = (pageNum - 1) * limitNum;
@@ -91,6 +91,10 @@ router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
     const filter = {};
     if (vendor && typeof vendor === 'string' && vendor.trim()) {
       filter.vendor = vendor.trim();
+    }
+    const validCategories = ['electronics', 'phones', 'laptops', 'accessories', 'audio', 'gaming', 'other'];
+    if (category && typeof category === 'string' && validCategories.includes(category.trim().toLowerCase())) {
+      filter.category = category.trim().toLowerCase();
     }
     if (search && typeof search === 'string' && search.trim()) {
       const term = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -132,11 +136,26 @@ router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
 });
 
 // @route   GET /api/products/vendor/mine
-// @desc    Get products for the current vendor
+// @desc    Get products for the current vendor. Optional: ?category=, ?search= (name/description)
 // @access  Private (vendor, admin)
 router.get('/vendor/mine', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {
-    const products = await Product.find({ vendor: req.user._id })
+    const { category, search } = req.query;
+    const filter = { vendor: req.user._id };
+
+    const validCategories = ['electronics', 'phones', 'laptops', 'accessories', 'audio', 'gaming', 'other'];
+    if (category && typeof category === 'string' && validCategories.includes(category.trim().toLowerCase())) {
+      filter.category = category.trim().toLowerCase();
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      const term = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } }
+      ];
+    }
+
+    const products = await Product.find(filter)
       .populate('vendor', 'name email')
       .sort({ updatedAt: -1 })
       .lean();

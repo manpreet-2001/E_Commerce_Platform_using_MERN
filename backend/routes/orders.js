@@ -6,12 +6,39 @@ const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 
 // @route   GET /api/orders/vendor/mine
-// @desc    Get orders that contain at least one product from the current vendor
+// @desc    Get orders that contain at least one product from the current vendor. Optional: ?status=, ?search= (customer name/email)
 // @access  Private (vendor, admin)
 router.get('/vendor/mine', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {
     const vendorId = req.user._id;
-    const orders = await Order.find({ 'items.product': { $in: await getProductIdsByVendor(vendorId) } })
+    const { status, search } = req.query;
+
+    const productIds = await getProductIdsByVendor(vendorId);
+    const filter = { 'items.product': { $in: productIds } };
+
+    if (status && typeof status === 'string' && ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].includes(status.trim().toLowerCase())) {
+      filter.status = status.trim().toLowerCase();
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      const term = search.trim();
+      const users = await User.find({
+        $or: [
+          { name: { $regex: term, $options: 'i' } },
+          { email: { $regex: term, $options: 'i' } }
+        ]
+      })
+        .select('_id')
+        .lean();
+      const userIds = users.map((u) => u._id);
+      if (userIds.length > 0) {
+        filter.user = { $in: userIds };
+      } else {
+        filter.user = { $in: [] };
+      }
+    }
+
+    const orders = await Order.find(filter)
       .populate('user', 'name email')
       .populate({
         path: 'items.product',

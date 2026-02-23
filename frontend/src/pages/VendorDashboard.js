@@ -52,7 +52,7 @@ const VENDOR_SIDEBAR_NAV = [
 ];
 
 const VendorDashboard = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -63,26 +63,53 @@ const VendorDashboard = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [profileEditing, setProfileEditing] = useState(false);
+  const [profileFormName, setProfileFormName] = useState('');
+  const [profileFormEmail, setProfileFormEmail] = useState('');
+  const [profileFormError, setProfileFormError] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [vendorOrderStatusFilter, setVendorOrderStatusFilter] = useState('');
+  const [vendorOrderSearchInput, setVendorOrderSearchInput] = useState('');
+  const [vendorOrderSearchQuery, setVendorOrderSearchQuery] = useState('');
+  const [vendorProductCategoryFilter, setVendorProductCategoryFilter] = useState('');
+  const [vendorProductSearchInput, setVendorProductSearchInput] = useState('');
+  const [vendorProductSearchQuery, setVendorProductSearchQuery] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setVendorOrderSearchQuery(vendorOrderSearchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [vendorOrderSearchInput]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVendorProductSearchQuery(vendorProductSearchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [vendorProductSearchInput]);
 
   const fetchProducts = useCallback(async () => {
     try {
-      const res = await axios.get('/api/products/vendor/mine');
+      const params = new URLSearchParams();
+      if (vendorProductCategoryFilter) params.set('category', vendorProductCategoryFilter);
+      if (vendorProductSearchQuery) params.set('search', vendorProductSearchQuery);
+      const res = await axios.get(`/api/products/vendor/mine?${params.toString()}`);
       setProducts(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load products');
       setProducts([]);
     }
-  }, []);
+  }, [vendorProductCategoryFilter, vendorProductSearchQuery]);
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await axios.get('/api/orders/vendor/mine');
+      const params = new URLSearchParams();
+      if (vendorOrderStatusFilter) params.set('status', vendorOrderStatusFilter);
+      if (vendorOrderSearchQuery) params.set('search', vendorOrderSearchQuery);
+      const res = await axios.get(`/api/orders/vendor/mine?${params.toString()}`);
       setOrders(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load orders');
       setOrders([]);
     }
-  }, []);
+  }, [vendorOrderStatusFilter, vendorOrderSearchQuery]);
 
   useEffect(() => {
     let cancelled = false;
@@ -161,6 +188,43 @@ const VendorDashboard = () => {
       await fetchProducts();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed');
+    }
+  };
+
+  const startProfileEdit = () => {
+    setProfileFormName(user?.name || '');
+    setProfileFormEmail(user?.email || '');
+    setProfileFormError('');
+    setProfileEditing(true);
+  };
+
+  const cancelProfileEdit = () => {
+    setProfileEditing(false);
+    setProfileFormError('');
+  };
+
+  const handleProfileSave = async (e) => {
+    e.preventDefault();
+    const name = (profileFormName || '').trim();
+    const email = (profileFormEmail || '').trim().toLowerCase();
+    if (!name || name.length < 2) {
+      setProfileFormError('Name must be at least 2 characters.');
+      return;
+    }
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      setProfileFormError('Please enter a valid email address.');
+      return;
+    }
+    setProfileSaving(true);
+    setProfileFormError('');
+    try {
+      await axios.put('/api/auth/profile', { name, email });
+      if (refreshUser) await refreshUser();
+      setProfileEditing(false);
+    } catch (err) {
+      setProfileFormError(err.response?.data?.message || 'Failed to update profile.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -450,26 +514,77 @@ const VendorDashboard = () => {
                 </div>
                 <section className="vendor-profile-card">
                   <div className="vendor-profile-avatar" aria-hidden="true">
-                    {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                    {(profileEditing ? profileFormName : user?.name)?.charAt(0)?.toUpperCase() || '?'}
                   </div>
-                  <div className="vendor-profile-info">
-                    <p className="vendor-profile-field">
-                      <span className="vendor-profile-field-label">Name</span>
-                      <span className="vendor-profile-field-value">{user?.name || '—'}</span>
-                    </p>
-                    <p className="vendor-profile-field">
-                      <span className="vendor-profile-field-label">Email</span>
-                      <span className="vendor-profile-field-value">{user?.email || '—'}</span>
-                    </p>
-                    <p className="vendor-profile-field">
-                      <span className="vendor-profile-field-label">Account type</span>
-                      <span className="vendor-profile-field-value">Vendor</span>
-                    </p>
-                  </div>
-                  <div className="vendor-profile-actions">
-                    <Link to="/profile" className="vendor-btn vendor-btn-primary">Edit profile</Link>
-                    <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
-                  </div>
+                  {profileEditing ? (
+                    <form onSubmit={handleProfileSave} className="vendor-profile-edit-form">
+                      {profileFormError && (
+                        <div className="vendor-dashboard-error" role="alert" style={{ marginBottom: 12 }}>
+                          {profileFormError}
+                        </div>
+                      )}
+                      <div className="vendor-product-form-group" style={{ marginBottom: 12 }}>
+                        <label htmlFor="vendor-profile-name">Name</label>
+                        <input
+                          id="vendor-profile-name"
+                          type="text"
+                          className="vendor-search-input"
+                          value={profileFormName}
+                          onChange={(e) => setProfileFormName(e.target.value)}
+                          required
+                          minLength={2}
+                          placeholder="Your name"
+                        />
+                      </div>
+                      <div className="vendor-product-form-group" style={{ marginBottom: 16 }}>
+                        <label htmlFor="vendor-profile-email">Email</label>
+                        <input
+                          id="vendor-profile-email"
+                          type="email"
+                          className="vendor-search-input"
+                          value={profileFormEmail}
+                          onChange={(e) => setProfileFormEmail(e.target.value)}
+                          required
+                          placeholder="your@email.com"
+                        />
+                      </div>
+                      <p className="vendor-profile-field" style={{ marginBottom: 16 }}>
+                        <span className="vendor-profile-field-label">Account type</span>
+                        <span className="vendor-profile-field-value">Vendor</span>
+                      </p>
+                      <div className="vendor-profile-actions">
+                        <button type="button" className="vendor-btn vendor-btn-secondary" onClick={cancelProfileEdit} disabled={profileSaving}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="vendor-btn vendor-btn-primary" disabled={profileSaving}>
+                          {profileSaving ? 'Saving…' : 'Save'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="vendor-profile-info">
+                        <p className="vendor-profile-field">
+                          <span className="vendor-profile-field-label">Name</span>
+                          <span className="vendor-profile-field-value">{user?.name || '—'}</span>
+                        </p>
+                        <p className="vendor-profile-field">
+                          <span className="vendor-profile-field-label">Email</span>
+                          <span className="vendor-profile-field-value">{user?.email || '—'}</span>
+                        </p>
+                        <p className="vendor-profile-field">
+                          <span className="vendor-profile-field-label">Account type</span>
+                          <span className="vendor-profile-field-value">Vendor</span>
+                        </p>
+                      </div>
+                      <div className="vendor-profile-actions">
+                        <button type="button" className="vendor-btn vendor-btn-primary" onClick={startProfileEdit}>
+                          Edit profile
+                        </button>
+                        <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                      </div>
+                    </>
+                  )}
                 </section>
               </div>
             ) : activeTab === 'notifications' ? (
@@ -507,8 +622,35 @@ const VendorDashboard = () => {
                         + Add Product
                       </button>
                     </div>
+                    <div className="vendor-products-filters">
+                      <label htmlFor="vendor-product-category" className="vendor-filter-label">Category:</label>
+                      <select
+                        id="vendor-product-category"
+                        className="vendor-filter-select"
+                        value={vendorProductCategoryFilter}
+                        onChange={(e) => setVendorProductCategoryFilter(e.target.value)}
+                      >
+                        <option value="">All categories</option>
+                        {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <label htmlFor="vendor-product-search" className="vendor-filter-label">Search:</label>
+                      <input
+                        id="vendor-product-search"
+                        type="search"
+                        className="vendor-search-input"
+                        placeholder="Name or description..."
+                        value={vendorProductSearchInput}
+                        onChange={(e) => setVendorProductSearchInput(e.target.value)}
+                        aria-label="Search products by name or description"
+                      />
+                      {(vendorProductSearchInput || vendorProductCategoryFilter) && (
+                        <button type="button" className="vendor-search-clear" onClick={() => { setVendorProductSearchInput(''); setVendorProductCategoryFilter(''); }}>Clear</button>
+                      )}
+                    </div>
                     {products.length === 0 ? (
-                      <p className="vendor-dashboard-overview-text">No products yet. Click &quot;Add Product&quot; to create one.</p>
+                      <p className="vendor-dashboard-overview-text">No products match your filters. Click &quot;Add Product&quot; to create one.</p>
                     ) : (
                       <div className="vendor-products-list">
                         {products.map((p) => (
@@ -544,50 +686,108 @@ const VendorDashboard = () => {
                 {activeTab === 'orders' && (
                   <div className="vendor-orders-section">
                     <h2 className="vendor-orders-heading">Orders containing your products</h2>
+                    <div className="vendor-products-filters">
+                      <label htmlFor="vendor-order-status-filter" className="vendor-filter-label">Status:</label>
+                      <select
+                        id="vendor-order-status-filter"
+                        className="vendor-filter-select"
+                        value={vendorOrderStatusFilter}
+                        onChange={(e) => setVendorOrderStatusFilter(e.target.value)}
+                      >
+                        <option value="">All statuses</option>
+                        {ORDER_STATUSES.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                      <label htmlFor="vendor-order-search" className="vendor-filter-label">Search customer:</label>
+                      <input
+                        id="vendor-order-search"
+                        type="search"
+                        className="vendor-search-input"
+                        placeholder="Name or email..."
+                        value={vendorOrderSearchInput}
+                        onChange={(e) => setVendorOrderSearchInput(e.target.value)}
+                        aria-label="Search orders by customer name or email"
+                      />
+                      {(vendorOrderSearchInput || vendorOrderStatusFilter) && (
+                        <button type="button" className="vendor-search-clear" onClick={() => { setVendorOrderSearchInput(''); setVendorOrderStatusFilter(''); }}>Clear</button>
+                      )}
+                    </div>
                     {orders.length === 0 ? (
-                      <p className="vendor-dashboard-overview-text">No orders yet.</p>
+                      <p className="vendor-dashboard-overview-text">No orders match your filters.</p>
                     ) : (
-                      <div className="vendor-orders-list">
-                        {orders.map((order) => (
-                          <div key={order._id} className="vendor-order-card">
-                            <div className="vendor-order-card-header">
-                              <span className="vendor-order-id">Order #{order._id.slice(-6).toUpperCase()}</span>
-                              <span className={`vendor-order-status vendor-order-status-${order.status}`}>{order.status}</span>
-                            </div>
-                            <p className="vendor-order-date">
-                              {order.createdAt ? new Date(order.createdAt).toLocaleString() : ''}
-                            </p>
-                            <p className="vendor-order-customer">
-                              Customer: {order.user?.name || order.user?.email || '—'}
-                            </p>
-                            <ul className="vendor-order-items">
-                              {order.items?.map((item, idx) => (
-                                <li key={idx} className="vendor-order-item">
-                                  {item.product?.name} × {item.quantity} @ {formatPrice(item.price)} = {formatPrice((item.price || 0) * (item.quantity || 0))}
-                                </li>
-                              ))}
-                            </ul>
-                            <div className="vendor-order-footer">
-                              <span className="vendor-order-subtotal">Your total: {formatPrice(order.vendorSubtotal || 0)}</span>
-                              <div className="vendor-order-actions">
-                                <label htmlFor={`status-${order._id}`} className="vendor-order-status-label">Status:</label>
-                                <select
-                                  id={`status-${order._id}`}
-                                  className="vendor-order-status-select"
-                                  value={order.status}
-                                  onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
-                                  disabled={updatingOrderId === order._id}
-                                >
-                                  {ORDER_STATUSES.map((s) => (
-                                    <option key={s.value} value={s.value}>{s.label}</option>
+                      (() => {
+                        const byStatus = { pending: [], confirmed: [], shipped: [], delivered: [], cancelled: [] };
+                        orders.forEach((o) => {
+                          if (byStatus[o.status]) byStatus[o.status].push(o);
+                        });
+                        const statusSections = [
+                          { key: 'pending', label: 'Pending', orders: byStatus.pending },
+                          { key: 'confirmed', label: 'Confirmed', orders: byStatus.confirmed },
+                          { key: 'shipped', label: 'Shipped', orders: byStatus.shipped },
+                          { key: 'delivered', label: 'Delivered', orders: byStatus.delivered },
+                          { key: 'cancelled', label: 'Cancelled', orders: byStatus.cancelled },
+                        ].filter((s) => s.orders.length > 0 && (!vendorOrderStatusFilter || s.key === vendorOrderStatusFilter));
+
+                        return statusSections.map((section) => (
+                          <div key={section.key} className="vendor-order-status-block">
+                            <h3 className="vendor-order-status-heading">{section.label}</h3>
+                            <div className="vendor-orders-table-wrap">
+                              <table className="vendor-orders-table vendor-order-management-table">
+                                <thead>
+                                  <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Products</th>
+                                    <th>Date</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {section.orders.map((order) => (
+                                    <tr key={order._id}>
+                                      <td>#{order._id.slice(-6).toUpperCase()}</td>
+                                      <td>
+                                        <span className="vendor-order-table-customer-name">{order.user?.name || '—'}</span>
+                                        <br />
+                                        <span className="vendor-order-table-customer-email">{order.user?.email || '—'}</span>
+                                      </td>
+                                      <td>
+                                        <ul className="vendor-order-table-products">
+                                          {(order.items || []).map((item, idx) => (
+                                            <li key={idx}>{item.product?.name} (×{item.quantity})</li>
+                                          ))}
+                                        </ul>
+                                      </td>
+                                      <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString(undefined, { dateStyle: 'short' }) + ' ' + new Date(order.createdAt).toLocaleTimeString(undefined, { timeStyle: 'short' }) : '—'}</td>
+                                      <td className="vendor-order-table-total">{formatPrice(order.vendorSubtotal || 0)}</td>
+                                      <td>
+                                        <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>{order.status}</span>
+                                      </td>
+                                      <td>
+                                        <select
+                                          className="vendor-order-status-select"
+                                          value={order.status}
+                                          onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
+                                          disabled={updatingOrderId === order._id}
+                                          aria-label={`Change status for order ${order._id.slice(-6)}`}
+                                        >
+                                          {ORDER_STATUSES.map((s) => (
+                                            <option key={s.value} value={s.value}>{s.label}</option>
+                                          ))}
+                                        </select>
+                                        {updatingOrderId === order._id && <span className="vendor-order-updating">…</span>}
+                                      </td>
+                                    </tr>
                                   ))}
-                                </select>
-                                {updatingOrderId === order._id && <span className="vendor-order-updating">Updating…</span>}
-                              </div>
+                                </tbody>
+                              </table>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        ));
+                      })()
                     )}
                     <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
                   </div>
