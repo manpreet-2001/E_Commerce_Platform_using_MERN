@@ -76,6 +76,16 @@ const AdminDashboard = () => {
   const [productFormError, setProductFormError] = useState('');
   const [adminProductVendorId, setAdminProductVendorId] = useState('');
   const [deletingProductId, setDeletingProductId] = useState(null);
+  const [userFormOpen, setUserFormOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userFormLoading, setUserFormLoading] = useState(false);
+  const [userFormError, setUserFormError] = useState('');
+  const [userFormName, setUserFormName] = useState('');
+  const [userFormEmail, setUserFormEmail] = useState('');
+  const [userFormPassword, setUserFormPassword] = useState('');
+  const [userFormNewPassword, setUserFormNewPassword] = useState('');
+  const [userFormRole, setUserFormRole] = useState('customer');
+  const [deletingUserId, setDeletingUserId] = useState(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState('');
   const [orderVendorFilter, setOrderVendorFilter] = useState('');
   const [orderSort, setOrderSort] = useState('dateDesc');
@@ -377,6 +387,80 @@ const AdminDashboard = () => {
       setError(err.response?.data?.message || 'Failed to delete product. Please try again.');
     } finally {
       setDeletingProductId(null);
+    }
+  };
+
+  const openAddUser = () => {
+    setEditingUser(null);
+    setUserFormName('');
+    setUserFormEmail('');
+    setUserFormPassword('');
+    setUserFormNewPassword('');
+    setUserFormRole('customer');
+    setUserFormError('');
+    setUserFormOpen(true);
+  };
+
+  const openEditUser = (u) => {
+    setEditingUser(u);
+    setUserFormName(u.name || '');
+    setUserFormEmail(u.email || '');
+    setUserFormPassword('');
+    setUserFormNewPassword('');
+    setUserFormRole(u.role || 'customer');
+    setUserFormError('');
+    setUserFormOpen(true);
+  };
+
+  const closeUserForm = () => {
+    setUserFormOpen(false);
+    setEditingUser(null);
+    setUserFormError('');
+  };
+
+  const handleUserFormSubmit = async (e) => {
+    e.preventDefault();
+    setUserFormError('');
+    setUserFormLoading(true);
+    try {
+      if (editingUser) {
+        const payload = { name: userFormName.trim(), email: userFormEmail.trim(), role: userFormRole };
+        if (userFormNewPassword.trim()) payload.newPassword = userFormNewPassword.trim();
+        await axios.put(`/api/users/${editingUser._id}`, payload);
+      } else {
+        if (!userFormPassword.trim()) {
+          setUserFormError('Password is required for new users.');
+          setUserFormLoading(false);
+          return;
+        }
+        await axios.post('/api/users', {
+          name: userFormName.trim(),
+          email: userFormEmail.trim(),
+          password: userFormPassword.trim(),
+          role: userFormRole
+        });
+      }
+      closeUserForm();
+      fetchUsers();
+    } catch (err) {
+      setUserFormError(err.response?.data?.message || (editingUser ? 'Update failed.' : 'Create failed.'));
+    } finally {
+      setUserFormLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (u) => {
+    if (u._id === user?.id) return;
+    if (!window.confirm(`Delete user "${u.name || u.email}"? This cannot be undone.`)) return;
+    setDeletingUserId(u._id);
+    setError('');
+    try {
+      await axios.delete(`/api/users/${u._id}`);
+      await fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete user.');
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -918,7 +1002,12 @@ const AdminDashboard = () => {
                   )}
                   {activeTab === 'users' && (
                     <div className="vendor-orders-section">
-                      <h2 className="vendor-orders-heading">All users</h2>
+                      <div className="vendor-products-header">
+                        <h2 className="vendor-orders-heading">All users</h2>
+                        <button type="button" className="vendor-btn vendor-btn-primary" onClick={openAddUser}>
+                          Add User
+                        </button>
+                      </div>
                       <div className="vendor-products-filters">
                         <label htmlFor="admin-user-role" className="vendor-filter-label">Role:</label>
                         <select
@@ -997,34 +1086,147 @@ const AdminDashboard = () => {
                                     </span>
                                   </td>
                                   <td>
-                                    {u._id === user?.id ? (
-                                      <span className="vendor-order-updating">(You)</span>
-                                    ) : updatingUserId === u._id ? (
-                                      <span className="vendor-order-updating">Updating…</span>
-                                    ) : u.isBlocked ? (
+                                    <div className="admin-user-actions">
                                       <button
                                         type="button"
                                         className="vendor-btn vendor-btn-secondary"
-                                        onClick={() => handleUnblockUser(u._id)}
-                                        disabled={updatingUserId !== null}
+                                        onClick={() => openEditUser(u)}
+                                        disabled={userFormOpen}
                                       >
-                                        Unblock
+                                        Edit
                                       </button>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        className="vendor-btn vendor-btn-danger"
-                                        onClick={() => handleBlockUser(u._id)}
-                                        disabled={updatingUserId !== null}
-                                      >
-                                        Block
-                                      </button>
-                                    )}
+                                      {u._id === user?.id ? (
+                                        <span className="vendor-order-updating">(You)</span>
+                                      ) : updatingUserId === u._id ? (
+                                        <span className="vendor-order-updating">…</span>
+                                      ) : u.isBlocked ? (
+                                        <button
+                                          type="button"
+                                          className="vendor-btn vendor-btn-secondary"
+                                          onClick={() => handleUnblockUser(u._id)}
+                                          disabled={updatingUserId !== null}
+                                        >
+                                          Unblock
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          className="vendor-btn vendor-btn-danger"
+                                          onClick={() => handleBlockUser(u._id)}
+                                          disabled={updatingUserId !== null}
+                                        >
+                                          Block
+                                        </button>
+                                      )}
+                                      {u._id !== user?.id && (
+                                        <button
+                                          type="button"
+                                          className="vendor-btn vendor-btn-danger"
+                                          onClick={() => handleDeleteUser(u)}
+                                          disabled={deletingUserId !== null}
+                                        >
+                                          {deletingUserId === u._id ? 'Deleting…' : 'Delete'}
+                                        </button>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
+                        </div>
+                      )}
+                      {userFormOpen && (
+                        <div className="vendor-modal-backdrop" onClick={closeUserForm} role="presentation">
+                          <div className="vendor-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="admin-user-form-title">
+                            <div className="vendor-modal-header">
+                              <h2 id="admin-user-form-title" className="vendor-modal-title">
+                                {editingUser ? 'Edit user' : 'Add user'}
+                              </h2>
+                              <button type="button" className="vendor-modal-close" onClick={closeUserForm} aria-label="Close">×</button>
+                            </div>
+                            <p className="vendor-modal-desc">
+                              {editingUser ? 'Update name, email, role, or set a new password (leave blank to keep current).' : 'Create a new user. Password must have 8+ chars, upper, lower, number, special character.'}
+                            </p>
+                            <form onSubmit={handleUserFormSubmit} className="admin-user-form" style={{ padding: '20px 24px 24px' }}>
+                              {userFormError && <div className="vendor-dashboard-error" role="alert" style={{ marginBottom: 16 }}>{userFormError}</div>}
+                              <div className="vendor-product-form-group" style={{ marginBottom: 16 }}>
+                                <label htmlFor="admin-user-form-name">Name *</label>
+                                <input
+                                  id="admin-user-form-name"
+                                  type="text"
+                                  className="vendor-search-input"
+                                  value={userFormName}
+                                  onChange={(e) => setUserFormName(e.target.value)}
+                                  required
+                                  minLength={2}
+                                  placeholder="Full name"
+                                />
+                              </div>
+                              <div className="vendor-product-form-group" style={{ marginBottom: 16 }}>
+                                <label htmlFor="admin-user-form-email">Email *</label>
+                                <input
+                                  id="admin-user-form-email"
+                                  type="email"
+                                  className="vendor-search-input"
+                                  value={userFormEmail}
+                                  onChange={(e) => setUserFormEmail(e.target.value)}
+                                  required
+                                  placeholder="email@example.com"
+                                />
+                              </div>
+                              {!editingUser ? (
+                                <div className="vendor-product-form-group" style={{ marginBottom: 16 }}>
+                                  <label htmlFor="admin-user-form-password">Password *</label>
+                                  <input
+                                    id="admin-user-form-password"
+                                    type="password"
+                                    className="vendor-search-input"
+                                    value={userFormPassword}
+                                    onChange={(e) => setUserFormPassword(e.target.value)}
+                                    required={!editingUser}
+                                    placeholder="Min 8 chars, upper, lower, number, special"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="vendor-product-form-group" style={{ marginBottom: 16 }}>
+                                  <label htmlFor="admin-user-form-newpassword">New password (optional)</label>
+                                  <input
+                                    id="admin-user-form-newpassword"
+                                    type="password"
+                                    className="vendor-search-input"
+                                    value={userFormNewPassword}
+                                    onChange={(e) => setUserFormNewPassword(e.target.value)}
+                                    placeholder="Leave blank to keep current"
+                                  />
+                                </div>
+                              )}
+                              <div className="vendor-product-form-group" style={{ marginBottom: 20 }}>
+                                <label htmlFor="admin-user-form-role">Role *</label>
+                                <select
+                                  id="admin-user-form-role"
+                                  className="vendor-filter-select"
+                                  value={userFormRole}
+                                  onChange={(e) => setUserFormRole(e.target.value)}
+                                  required
+                                  disabled={editingUser?._id === user?.id}
+                                >
+                                  <option value="customer">customer</option>
+                                  <option value="vendor">vendor</option>
+                                  <option value="admin">admin</option>
+                                </select>
+                                {editingUser && editingUser._id === user?.id && (
+                                  <p className="vendor-product-form-hint" style={{ marginTop: 4 }}>You cannot change your own role.</p>
+                                )}
+                              </div>
+                              <div className="vendor-product-form-actions" style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                                <button type="button" className="vendor-product-form-btn vendor-product-form-btn-cancel" onClick={closeUserForm}>Cancel</button>
+                                <button type="submit" className="vendor-product-form-btn vendor-product-form-btn-submit" disabled={userFormLoading}>
+                                  {userFormLoading ? 'Saving…' : (editingUser ? 'Update' : 'Create')}
+                                </button>
+                              </div>
+                            </form>
+                          </div>
                         </div>
                       )}
                       <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
