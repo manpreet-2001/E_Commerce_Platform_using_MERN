@@ -46,6 +46,7 @@ const VENDOR_SIDEBAR_NAV = [
   { id: 'overview', label: 'Overview', icon: '🏠' },
   { id: 'products', label: 'Product Management', icon: '🛒' },
   { id: 'orders', label: 'Order Management', icon: '📋' },
+  { id: 'reviews', label: 'Reviews & Ratings', icon: '⭐' },
   { id: 'profile', label: 'Vendor Profile', icon: '👤' },
   { id: 'analytics', label: 'Analytics', icon: '📈' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
@@ -74,6 +75,7 @@ const VendorDashboard = () => {
   const [vendorProductCategoryFilter, setVendorProductCategoryFilter] = useState('');
   const [vendorProductSearchInput, setVendorProductSearchInput] = useState('');
   const [vendorProductSearchQuery, setVendorProductSearchQuery] = useState('');
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     const t = setTimeout(() => setVendorOrderSearchQuery(vendorOrderSearchInput.trim()), 400);
@@ -111,17 +113,26 @@ const VendorDashboard = () => {
     }
   }, [vendorOrderStatusFilter, vendorOrderSearchQuery]);
 
+  const fetchReviews = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/reviews/vendor/mine');
+      setReviews(res.data.data || []);
+    } catch (err) {
+      setReviews([]);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
       setError('');
-      await Promise.all([fetchProducts(), fetchOrders()]);
+      await Promise.all([fetchProducts(), fetchOrders(), fetchReviews()]);
       if (!cancelled) setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [fetchProducts, fetchOrders]);
+  }, [fetchProducts, fetchOrders, fetchReviews]);
 
   const vendorStats = useMemo(
     () => computeVendorStats(products, orders),
@@ -505,6 +516,44 @@ const VendorDashboard = () => {
                   </div>
                 </div>
                 <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+              </div>
+            ) : activeTab === 'reviews' ? (
+              <div className="vendor-reviews-page">
+                <div className="vendor-content-header">
+                  <h1 className="vendor-dashboard-title">Reviews &amp; Ratings</h1>
+                  <p className="vendor-dashboard-greeting">Reviews left by customers on your products. View only.</p>
+                </div>
+                {reviews.length === 0 ? (
+                  <p className="vendor-empty-text">No reviews yet on your products.</p>
+                ) : (
+                  <div className="vendor-orders-table-wrap">
+                    <table className="vendor-orders-table vendor-reviews-table">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Customer</th>
+                          <th>Rating</th>
+                          <th>Comment</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reviews.map((r) => (
+                          <tr key={r._id}>
+                            <td>{r.product?.name || '—'}</td>
+                            <td>
+                              <span className="vendor-review-customer-name">{r.user?.name || '—'}</span>
+                              {r.user?.email && <span className="vendor-review-customer-email">{r.user.email}</span>}
+                            </td>
+                            <td>{r.rating}/5</td>
+                            <td className="vendor-review-comment-cell">{r.comment || '—'}</td>
+                            <td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             ) : activeTab === 'profile' ? (
               <div className="vendor-profile-page">

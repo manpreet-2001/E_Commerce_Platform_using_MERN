@@ -4,6 +4,16 @@ const Review = require('../models/Review');
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 
+/** Update product's averageRating and reviewCount from current reviews */
+async function updateProductReviewStats(productId) {
+  const reviews = await Review.find({ product: productId }).select('rating').lean();
+  const count = reviews.length;
+  const average = count
+    ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10
+    : 0;
+  await Product.findByIdAndUpdate(productId, { averageRating: average, reviewCount: count });
+}
+
 // @route   GET /api/products/:productId/reviews
 // @desc    Get all reviews for a product
 // @access  Public
@@ -70,6 +80,7 @@ router.post('/', protect, async (req, res) => {
       comment: trimmedComment
     });
 
+    await updateProductReviewStats(productId);
     const populated = await Review.findById(review._id).populate('user', 'name').lean();
     res.status(201).json({ success: true, message: 'Review submitted.', data: populated });
   } catch (error) {
@@ -81,6 +92,51 @@ router.post('/', protect, async (req, res) => {
     }
     console.error('POST /api/products/:productId/reviews error:', error.message || error);
     res.status(500).json({ success: false, message: 'Failed to submit review' });
+  }
+});
+
+// @route   PUT /api/products/:productId/reviews/:reviewId
+// @desc    Update a review (admin only)
+// @access  Private (admin)
+router.put('/:reviewId', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { productId, reviewId } = req.params;
+    const { rating, comment } = req.body;
+
+    const product = await Product.findById(productId).select('_id').lean();
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    const review = await Review.findOne({ _id: reviewId, product: productId });
+    if (!review) {
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+
+    const updates = {};
+    if (rating != null) {
+      const num = Number(rating);
+      if (num < 1 || num > 5) {
+        return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5.' });
+      }
+      updates.rating = Math.round(num);
+    }
+    if (comment !== undefined) updates.comment = typeof comment === 'string' ? comment.trim() : '';
+
+    const updated = await Review.findByIdAndUpdate(
+      reviewId,
+      updates,
+      { new: true, runValidators: true }
+    ).populate('user', 'name').lean();
+
+    await updateProductReviewStats(productId);
+    res.json({ success: true, message: 'Review updated.', data: updated });
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+    console.error('PUT /api/products/:productId/reviews/:reviewId error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Failed to update review' });
   }
 });
 
@@ -102,6 +158,7 @@ router.delete('/:reviewId', protect, authorize('admin'), async (req, res) => {
     }
 
     await Review.findByIdAndDelete(reviewId);
+    await updateProductReviewStats(productId);
     res.json({ success: true, message: 'Review removed.' });
   } catch (error) {
     if (error.kind === 'ObjectId') {

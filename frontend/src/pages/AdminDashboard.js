@@ -48,6 +48,7 @@ const ADMIN_SIDEBAR_NAV = [
   { id: 'products', label: 'All Products', icon: '🛒' },
   { id: 'orders', label: 'Order Management', icon: '📋' },
   { id: 'users', label: 'User Management', icon: '👥' },
+  { id: 'reviews', label: 'Reviews & Ratings', icon: '⭐' },
   { id: 'analytics', label: 'Analytics', icon: '📈' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
 ];
@@ -92,6 +93,13 @@ const AdminDashboard = () => {
   const [orderSort, setOrderSort] = useState('dateDesc');
   const [orderSearchInput, setOrderSearchInput] = useState('');
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [reviews, setReviews] = useState([]);
+  const [reviewEditId, setReviewEditId] = useState(null);
+  const [reviewEditRating, setReviewEditRating] = useState(5);
+  const [reviewEditComment, setReviewEditComment] = useState('');
+  const [reviewEditSaving, setReviewEditSaving] = useState(false);
+  const [reviewEditError, setReviewEditError] = useState('');
+  const [deletingReviewId, setDeletingReviewId] = useState(null);
 
   // Debounce search: update query 400ms after user stops typing
   useEffect(() => {
@@ -166,17 +174,26 @@ const AdminDashboard = () => {
     }
   }, [userRoleFilter, userSearchQuery]);
 
+  const fetchReviews = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/reviews/admin');
+      setReviews(res.data.data || []);
+    } catch (err) {
+      setReviews([]);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
       setError('');
-      await Promise.all([fetchProducts(), fetchOrders(), fetchVendors(), fetchUsers()]);
+      await Promise.all([fetchProducts(), fetchOrders(), fetchVendors(), fetchUsers(), fetchReviews()]);
       if (!cancelled) setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [fetchProducts, fetchOrders, fetchVendors, fetchUsers]);
+  }, [fetchProducts, fetchOrders, fetchVendors, fetchUsers, fetchReviews]);
 
   const adminStats = useMemo(() => {
     const pending = orders.filter((o) => o.status === 'pending').length;
@@ -463,6 +480,55 @@ const AdminDashboard = () => {
       setError(err.response?.data?.message || 'Failed to delete user.');
     } finally {
       setDeletingUserId(null);
+    }
+  };
+
+  const openReviewEdit = (r) => {
+    setReviewEditId(r._id);
+    setReviewEditRating(r.rating);
+    setReviewEditComment(r.comment || '');
+    setReviewEditError('');
+  };
+
+  const closeReviewEdit = () => {
+    setReviewEditId(null);
+    setReviewEditRating(5);
+    setReviewEditComment('');
+    setReviewEditError('');
+  };
+
+  const handleReviewEditSave = async (e) => {
+    e.preventDefault();
+    const r = reviews.find((x) => x._id === reviewEditId);
+    if (!r?.product?._id) return;
+    setReviewEditSaving(true);
+    setReviewEditError('');
+    try {
+      await axios.put(`/api/products/${r.product._id}/reviews/${reviewEditId}`, {
+        rating: reviewEditRating,
+        comment: reviewEditComment
+      });
+      closeReviewEdit();
+      await fetchReviews();
+    } catch (err) {
+      setReviewEditError(err.response?.data?.message || 'Failed to update review.');
+    } finally {
+      setReviewEditSaving(false);
+    }
+  };
+
+  const handleDeleteReview = async (r) => {
+    if (!window.confirm('Remove this review? This cannot be undone.')) return;
+    const productId = r.product?._id || r.product;
+    if (!productId) return;
+    setDeletingReviewId(r._id);
+    try {
+      await axios.delete(`/api/products/${productId}/reviews/${r._id}`);
+      await fetchReviews();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete review.');
+    } finally {
+      setDeletingReviewId(null);
     }
   };
 
@@ -839,18 +905,18 @@ const AdminDashboard = () => {
               <>
                 <div className="vendor-content-header">
                   <h1 className="vendor-dashboard-title">
-                    {activeTab === 'products' ? 'All Products' : activeTab === 'orders' ? 'Order Management' : 'User Management'}
+                    {activeTab === 'products' ? 'All Products' : activeTab === 'orders' ? 'Order Management' : activeTab === 'reviews' ? 'Reviews & Ratings' : 'User Management'}
                   </h1>
                   <p className="vendor-dashboard-greeting">Hello, {displayName}</p>
                 </div>
                 <div className="vendor-stats vendor-stats-two">
                   <div className="vendor-stat-card">
-                    <span className="vendor-stat-value">{activeTab === 'users' ? users.length : products.length}</span>
-                    <span className="vendor-stat-label">{activeTab === 'users' ? 'Users' : 'Products'}</span>
+                    <span className="vendor-stat-value">{activeTab === 'reviews' ? reviews.length : activeTab === 'users' ? users.length : products.length}</span>
+                    <span className="vendor-stat-label">{activeTab === 'reviews' ? 'Reviews' : activeTab === 'users' ? 'Users' : 'Products'}</span>
                   </div>
                   <div className="vendor-stat-card">
-                    <span className="vendor-stat-value">{activeTab === 'users' ? users.filter((u) => u.isBlocked).length : orders.length}</span>
-                    <span className="vendor-stat-label">{activeTab === 'users' ? 'Blocked' : 'Orders'}</span>
+                    <span className="vendor-stat-value">{activeTab === 'reviews' ? '—' : activeTab === 'users' ? users.filter((u) => u.isBlocked).length : orders.length}</span>
+                    <span className="vendor-stat-label">{activeTab === 'reviews' ? 'Edit / Delete below' : activeTab === 'users' ? 'Blocked' : 'Orders'}</span>
                   </div>
                 </div>
                 <div className="vendor-dashboard-content">
@@ -1008,6 +1074,117 @@ const AdminDashboard = () => {
                               loading={productFormLoading}
                               error={productFormError}
                             />
+                          </div>
+                        </div>
+                      )}
+                      <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                    </div>
+                  )}
+                  {activeTab === 'reviews' && (
+                    <div className="vendor-orders-section">
+                      <h2 className="vendor-orders-heading">All reviews — add, edit, or remove</h2>
+                      {reviews.length === 0 ? (
+                        <p className="vendor-empty-text">No reviews on the platform yet.</p>
+                      ) : (
+                        <div className="vendor-orders-table-wrap">
+                          <table className="vendor-orders-table admin-reviews-table">
+                            <thead>
+                              <tr>
+                                <th>Product</th>
+                                <th>Customer</th>
+                                <th>Rating</th>
+                                <th>Comment</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {reviews.map((r) => (
+                                <tr key={r._id}>
+                                  <td>{r.product?.name || '—'}</td>
+                                  <td>
+                                    <span className="admin-review-customer-name">{r.user?.name || '—'}</span>
+                                    {r.user?.email && <span className="admin-review-customer-email">{r.user.email}</span>}
+                                  </td>
+                                  <td>{r.rating}/5</td>
+                                  <td className="vendor-review-comment-cell">{r.comment || '—'}</td>
+                                  <td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}</td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="vendor-btn vendor-btn-secondary vendor-btn-sm"
+                                      onClick={() => openReviewEdit(r)}
+                                      disabled={reviewEditId != null}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="vendor-btn vendor-btn-danger vendor-btn-sm"
+                                      onClick={() => handleDeleteReview(r)}
+                                      disabled={deletingReviewId !== null}
+                                    >
+                                      {deletingReviewId === r._id ? 'Deleting…' : 'Delete'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                      {reviewEditId && (
+                        <div
+                          className="vendor-modal-backdrop"
+                          onClick={closeReviewEdit}
+                          role="presentation"
+                        >
+                          <div
+                            className="vendor-modal"
+                            onClick={(e) => e.stopPropagation()}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="admin-review-edit-title"
+                          >
+                            <div className="vendor-modal-header">
+                              <h2 id="admin-review-edit-title" className="vendor-modal-title">Edit review</h2>
+                              <button type="button" className="vendor-modal-close" onClick={closeReviewEdit} aria-label="Close">×</button>
+                            </div>
+                            <form onSubmit={handleReviewEditSave}>
+                              {reviewEditError && <p className="vendor-dashboard-error" style={{ marginBottom: 12 }}>{reviewEditError}</p>}
+                              <div className="vendor-product-form-group" style={{ marginBottom: 12 }}>
+                                <label htmlFor="admin-review-rating">Rating (1–5)</label>
+                                <select
+                                  id="admin-review-rating"
+                                  className="vendor-filter-select"
+                                  value={reviewEditRating}
+                                  onChange={(e) => setReviewEditRating(Number(e.target.value))}
+                                  required
+                                >
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <option key={n} value={n}>{n} star{n !== 1 ? 's' : ''}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="vendor-product-form-group" style={{ marginBottom: 16 }}>
+                                <label htmlFor="admin-review-comment">Comment</label>
+                                <textarea
+                                  id="admin-review-comment"
+                                  className="vendor-search-input"
+                                  rows={3}
+                                  maxLength={2000}
+                                  value={reviewEditComment}
+                                  onChange={(e) => setReviewEditComment(e.target.value)}
+                                  placeholder="Optional comment"
+                                />
+                              </div>
+                              <div className="vendor-modal-actions">
+                                <button type="button" className="vendor-btn vendor-btn-secondary" onClick={closeReviewEdit}>Cancel</button>
+                                <button type="submit" className="vendor-btn vendor-btn-primary" disabled={reviewEditSaving}>
+                                  {reviewEditSaving ? 'Saving…' : 'Save'}
+                                </button>
+                              </div>
+                            </form>
                           </div>
                         </div>
                       )}

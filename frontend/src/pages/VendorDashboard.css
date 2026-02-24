@@ -983,3 +983,42 @@
 .vendor-modal .vendor-product-form {
   padding: 20px 24px 24px;
 }
+
+.vendor-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding: 0 24px 24px;
+}
+
+.vendor-btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+}
+
+/* Reviews tables (vendor + admin) */
+.vendor-reviews-table .vendor-review-customer-name,
+.admin-reviews-table .admin-review-customer-name {
+  display: block;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.vendor-reviews-table .vendor-review-customer-email,
+.admin-reviews-table .admin-review-customer-email {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.vendor-review-comment-cell {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-reviews-table .vendor-btn-sm {
+  margin-right: 6px;
+}
