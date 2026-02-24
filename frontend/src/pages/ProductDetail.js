@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import StarRating from '../components/StarRating';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { getImageUrl } from '../utils/imageUrl';
@@ -34,6 +35,7 @@ const ProductDetail = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState('');
+  const [deletingReviewId, setDeletingReviewId] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -82,6 +84,19 @@ const ProductDetail = () => {
       setReviewError(err.response?.data?.message || 'Failed to submit review.');
     } finally {
       setReviewSubmitting(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!id || !hasRole?.('admin')) return;
+    setDeletingReviewId(reviewId);
+    try {
+      await axios.delete(`/api/products/${id}/reviews/${reviewId}`);
+      await fetchReviews();
+    } catch {
+      setReviewError('Failed to remove review.');
+    } finally {
+      setDeletingReviewId(null);
     }
   };
 
@@ -244,10 +259,8 @@ const ProductDetail = () => {
                 </h2>
                 {reviewStats.count > 0 && (
                   <p className="product-detail-reviews-avg">
-                    <span className="product-detail-reviews-stars" aria-label={`${reviewStats.average} out of 5 stars`}>
-                      {'★'.repeat(Math.round(reviewStats.average))}{'☆'.repeat(5 - Math.round(reviewStats.average))}
-                    </span>
-                    {' '}{reviewStats.average.toFixed(1)} average
+                    <StarRating rating={reviewStats.average} className="star-rating-large" ariaLabel={`${reviewStats.average} out of 5 stars`} />
+                    <span className="product-detail-reviews-avg-text">{reviewStats.average.toFixed(1)} average</span>
                   </p>
                 )}
 
@@ -256,18 +269,13 @@ const ProductDetail = () => {
                     <p className="product-detail-review-form-title">Write a review</p>
                     {reviewError && <p className="product-detail-review-error" role="alert">{reviewError}</p>}
                     <div className="product-detail-review-rating">
-                      <label htmlFor="review-rating">Rating</label>
-                      <select
-                        id="review-rating"
-                        value={reviewRating}
-                        onChange={(e) => setReviewRating(Number(e.target.value))}
-                        required
-                        className="product-detail-review-select"
-                      >
-                        {[5, 4, 3, 2, 1].map((n) => (
-                          <option key={n} value={n}>{n} star{n !== 1 ? 's' : ''}</option>
-                        ))}
-                      </select>
+                      <span className="product-detail-review-rating-label">Rating</span>
+                      <StarRating
+                        rating={reviewRating}
+                        interactive
+                        onChange={setReviewRating}
+                        ariaLabel="Choose your rating"
+                      />
                     </div>
                     <div className="product-detail-review-comment">
                       <label htmlFor="review-comment">Comment (optional)</label>
@@ -295,12 +303,23 @@ const ProductDetail = () => {
                   <ul className="product-detail-review-list">
                     {reviews.map((r) => (
                       <li key={r._id} className="product-detail-review-item">
-                        <span className="product-detail-review-item-stars" aria-hidden="true">
-                          {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
-                        </span>
-                        <span className="product-detail-review-item-meta">
-                          {r.user?.name || 'Customer'} · {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
-                        </span>
+                        <div className="product-detail-review-item-header">
+                          <StarRating rating={r.rating} ariaLabel={`${r.rating} out of 5 stars`} />
+                          <span className="product-detail-review-item-meta">
+                            {r.user?.name || 'Customer'} · {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
+                          </span>
+                          {hasRole?.('admin') && (
+                            <button
+                              type="button"
+                              className="product-detail-review-delete-btn"
+                              onClick={() => handleDeleteReview(r._id)}
+                              disabled={deletingReviewId === r._id}
+                              aria-label="Remove review"
+                            >
+                              {deletingReviewId === r._id ? 'Removing…' : 'Remove'}
+                            </button>
+                          )}
+                        </div>
                         {r.comment && <p className="product-detail-review-item-comment">{r.comment}</p>}
                       </li>
                     ))}

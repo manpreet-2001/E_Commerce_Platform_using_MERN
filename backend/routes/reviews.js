@@ -84,4 +84,32 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
+// @route   DELETE /api/products/:productId/reviews/:reviewId
+// @desc    Delete a review (admin only - moderation)
+// @access  Private (admin)
+router.delete('/:reviewId', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { productId, reviewId } = req.params;
+
+    const product = await Product.findById(productId).select('_id').lean();
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    const review = await Review.findOne({ _id: reviewId, product: productId });
+    if (!review) {
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+
+    await Review.findByIdAndDelete(reviewId);
+    res.json({ success: true, message: 'Review removed.' });
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+    console.error('DELETE /api/products/:productId/reviews/:reviewId error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Failed to delete review' });
+  }
+});
+
 module.exports = router;
