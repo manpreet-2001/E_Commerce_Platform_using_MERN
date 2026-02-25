@@ -144,6 +144,15 @@
   justify-content: center;
 }
 
+.nav-wishlist-link .nav-cart-icon {
+  font-size: 1.25rem;
+  color: #e11d48;
+}
+
+.nav-wishlist-link:hover .nav-cart-icon {
+  color: #be123c;
+}
+
 .nav-user {
   font-size: 0.9375rem;
   font-weight: 500;

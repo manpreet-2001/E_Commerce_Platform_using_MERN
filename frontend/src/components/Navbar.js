@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import Logo from './Logo';
 import './Navbar.css';
 
@@ -145,6 +146,11 @@ const Navbar = () => {
                         {isCustomer && (
                           <Link to="/profile" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             Profile
+                          </Link>
+                        )}
+                        {isCustomer && (
+                          <Link to="/wishlist" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                            Wishlist
                           </Link>
                         )}
                         {isCustomer && (

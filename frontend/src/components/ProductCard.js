@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/imageUrl';
 
 const formatPrice = (price) => {
@@ -13,8 +15,12 @@ const formatPrice = (price) => {
 
 const ProductCard = ({ product, getCategoryLabel }) => {
   const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const { isAuthenticated } = useAuth();
   const [adding, setAdding] = useState(false);
+  const [wishlistToggling, setWishlistToggling] = useState(false);
   const categoryLabel = getCategoryLabel ? getCategoryLabel(product.category) : product.category;
+  const inWishlist = isInWishlist(product._id);
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -25,8 +31,29 @@ const ProductCard = ({ product, getCategoryLabel }) => {
     setAdding(false);
   };
 
+  const handleWishlistClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated() || wishlistToggling) return;
+    setWishlistToggling(true);
+    await toggleWishlist(product._id);
+    setWishlistToggling(false);
+  };
+
   return (
     <article className="product-card">
+      {isAuthenticated() && (
+        <button
+          type="button"
+          className={`product-card-wishlist-btn ${inWishlist ? 'in-wishlist' : ''}`}
+          onClick={handleWishlistClick}
+          disabled={wishlistToggling}
+          aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+        >
+          <span aria-hidden="true">{inWishlist ? '♥' : '♡'}</span>
+        </button>
+      )}
       <Link to={`/products/${product._id}`} className="product-card-link">
         <div className="product-card-image-wrap">
           {product.image ? (

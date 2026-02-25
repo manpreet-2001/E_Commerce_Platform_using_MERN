@@ -237,12 +237,47 @@
 }
 
 .product-card {
+  position: relative;
   background: #fff;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.product-card-wishlist-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.product-card-wishlist-btn:hover {
+  color: #e11d48;
+  background: #fff;
+  transform: scale(1.08);
+}
+
+.product-card-wishlist-btn.in-wishlist {
+  color: #e11d48;
+}
+
+.product-card-wishlist-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 .product-card:hover {
@@ -644,6 +679,42 @@
 
 .product-detail-cart-msg.error {
   color: #dc2626;
+}
+
+.product-detail-wishlist-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.product-detail-wishlist-btn:hover:not(:disabled) {
+  color: #e11d48;
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
+.product-detail-wishlist-btn.in-wishlist {
+  color: #e11d48;
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
+.product-detail-wishlist-btn .product-detail-wishlist-icon {
+  font-size: 1.125rem;
+}
+
+.product-detail-wishlist-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 /* Reviews */

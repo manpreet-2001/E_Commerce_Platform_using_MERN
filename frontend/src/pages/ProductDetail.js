@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import StarRating from '../components/StarRating';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { getImageUrl } from '../utils/imageUrl';
 import './Products.css';
 
@@ -21,7 +22,8 @@ const CATEGORY_LABELS = {
 const ProductDetail = () => {
   const { id } = useParams();
   const { addToCart } = useCart();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, hasRole } = useAuth();
+  const { isInWishlist, addToWishlist, removeFromWishlist, wishlistLoading } = useWishlist();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,6 +38,7 @@ const ProductDetail = () => {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [deletingReviewId, setDeletingReviewId] = useState(null);
+  const [wishlistToggling, setWishlistToggling] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -105,6 +108,20 @@ const ProductDetail = () => {
   };
 
   const formatCategory = (cat) => CATEGORY_LABELS[cat] || cat;
+
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated()) return;
+    setWishlistToggling(true);
+    try {
+      if (isInWishlist(id)) {
+        await removeFromWishlist(id);
+      } else {
+        await addToWishlist(id);
+      }
+    } finally {
+      setWishlistToggling(false);
+    }
+  };
 
   const handleAddToCart = async () => {
     setCartMessage('');
@@ -244,6 +261,21 @@ const ProductDetail = () => {
                   >
                     {adding ? 'Adding…' : 'Add to Cart'}
                   </button>
+                  {isAuthenticated() && (
+                    <button
+                      type="button"
+                      className={`product-detail-wishlist-btn ${isInWishlist(id) ? 'in-wishlist' : ''}`}
+                      onClick={handleWishlistToggle}
+                      disabled={wishlistToggling || wishlistLoading}
+                      aria-label={isInWishlist(id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                      title={isInWishlist(id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                    >
+                      <span className="product-detail-wishlist-icon" aria-hidden="true">
+                        {isInWishlist(id) ? '♥' : '♡'}
+                      </span>
+                      {wishlistToggling ? '…' : isInWishlist(id) ? 'In wishlist' : 'Wishlist'}
+                    </button>
+                  )}
                   {cartMessage && (
                     <p className={`product-detail-cart-msg ${cartMessage.includes('Failed') || cartMessage.includes('sign in') ? 'error' : 'success'}`}>
                       {cartMessage}
