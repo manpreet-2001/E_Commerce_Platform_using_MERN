@@ -13,7 +13,7 @@ const Wishlist = () => {
   const { wishlistItems, wishlistLoading, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
   const [removingId, setRemovingId] = useState(null);
-  const [addingId, setAddingId] = useState(null);
+  const [movingId, setMovingId] = useState(null);
   const [message, setMessage] = useState('');
 
   const handleRemove = async (productId) => {
@@ -23,13 +23,19 @@ const Wishlist = () => {
     setRemovingId(null);
   };
 
-  const handleAddToCart = async (productId, e) => {
+  /** Move item to cart: add to cart then remove from wishlist */
+  const handleMoveToCart = async (productId, e) => {
     e?.preventDefault?.();
-    setAddingId(productId);
+    setMovingId(productId);
     setMessage('');
     const result = await addToCart(productId, 1);
-    setMessage(result.success ? 'Added to cart' : result.message || 'Could not add to cart');
-    setAddingId(null);
+    if (result.success) {
+      await removeFromWishlist(productId);
+      setMessage('Moved to cart');
+    } else {
+      setMessage(result.message || 'Could not add to cart');
+    }
+    setMovingId(null);
   };
 
   return (
@@ -42,7 +48,7 @@ const Wishlist = () => {
           <p className="wishlist-subtitle">Items you saved for later</p>
 
           {message && (
-            <div className={`wishlist-message ${message.includes('Added') ? 'success' : 'error'}`}>
+            <div className={`wishlist-message ${message.includes('Moved') || message.includes('Added') ? 'success' : 'error'}`}>
               {message}
             </div>
           )}

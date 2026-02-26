@@ -19,6 +19,7 @@ import OrderDetail from './pages/OrderDetail';
 import VendorDashboard from './pages/VendorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
+import Wishlist from './pages/Wishlist';
 import NotFound from './pages/NotFound';
 import PrivateRoute from './components/PrivateRoute';
 import './App.css';
@@ -38,6 +39,7 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
+        <WishlistProvider>
         <Router>
           <Routes>
             <Route path="/login" element={
@@ -83,7 +85,7 @@ function App() {
           </Routes>
         </Router>
         </WishlistProvider>
-      </CartProvider>
+        </CartProvider>
     </AuthProvider>
   );
 }
