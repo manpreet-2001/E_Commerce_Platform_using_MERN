@@ -19,6 +19,7 @@ import {
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/imageUrl';
+import { buildCsv, downloadCsv } from '../utils/csvExport';
 import VendorProductForm from '../components/VendorProductForm';
 import './VendorDashboard.css';
 
@@ -42,6 +43,55 @@ const ORDER_STATUSES = [
 
 const formatPrice = (price) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price);
+
+const exportOrdersToCsv = (ordersList, formatPriceFn) => {
+  const header = [
+    'Order ID',
+    'Date',
+    'Customer Name',
+    'Customer Email',
+    'Status',
+    'Total',
+    'Payment',
+    'Shipping Name',
+    'Address',
+    'City',
+    'State',
+    'ZIP',
+    'Country',
+    'Items',
+    'Vendors'
+  ];
+  const addr = (o) => o.shippingAddress || {};
+  const rows = (ordersList || []).map((order) => {
+    const vendorNames = [...new Set((order.items || [])
+      .map((i) => i.product?.vendor?.name || i.product?.vendor?.email || '')
+      .filter(Boolean))];
+    const itemsSummary = (order.items || [])
+      .map((i) => `${i.product?.name || 'Product'} × ${i.quantity || 0}`)
+      .join('; ');
+    return [
+      order._id ? `#${order._id.slice(-6).toUpperCase()}` : '',
+      order.createdAt ? new Date(order.createdAt).toISOString() : '',
+      order.user?.name || '',
+      order.user?.email || '',
+      order.status || '',
+      formatPriceFn(order.totalAmount || 0),
+      order.paymentMethod === 'cod' ? 'Cash on Delivery' : order.paymentMethod || '',
+      addr(order).fullName || '',
+      addr(order).address || '',
+      addr(order).city || '',
+      addr(order).state || '',
+      addr(order).zip || '',
+      addr(order).country || '',
+      itemsSummary,
+      vendorNames.join(', ')
+    ];
+  });
+  const csv = buildCsv([header, ...rows]);
+  const filename = `orders-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  downloadCsv(csv, filename);
+};
 
 const ADMIN_SIDEBAR_NAV = [
   { id: 'overview', label: 'Overview', icon: '🏠' },
@@ -93,6 +143,8 @@ const AdminDashboard = () => {
   const [orderSort, setOrderSort] = useState('dateDesc');
   const [orderSearchInput, setOrderSearchInput] = useState('');
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [orderDateFrom, setOrderDateFrom] = useState('');
+  const [orderDateTo, setOrderDateTo] = useState('');
   const [reviews, setReviews] = useState([]);
   const [reviewEditId, setReviewEditId] = useState(null);
   const [reviewEditRating, setReviewEditRating] = useState(5);
@@ -100,6 +152,7 @@ const AdminDashboard = () => {
   const [reviewEditSaving, setReviewEditSaving] = useState(false);
   const [reviewEditError, setReviewEditError] = useState('');
   const [deletingReviewId, setDeletingReviewId] = useState(null);
+  const [notificationSort, setNotificationSort] = useState('newest');
 
   // Debounce search: update query 400ms after user stops typing
   useEffect(() => {
@@ -153,13 +206,15 @@ const AdminDashboard = () => {
       if (orderVendorFilter) params.set('vendor', orderVendorFilter);
       if (orderSort) params.set('sort', orderSort);
       if (orderSearchQuery) params.set('search', orderSearchQuery);
+      if (orderDateFrom) params.set('from', orderDateFrom);
+      if (orderDateTo) params.set('to', orderDateTo);
       const res = await axios.get(`/api/orders/admin/all?${params.toString()}`);
       setOrders(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load orders');
       setOrders([]);
     }
-  }, [orderStatusFilter, orderVendorFilter, orderSort, orderSearchQuery]);
+  }, [orderStatusFilter, orderVendorFilter, orderSort, orderSearchQuery, orderDateFrom, orderDateTo]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -551,7 +606,12 @@ const AdminDashboard = () => {
                   onClick={() => setActiveTab(id)}
                 >
                   <span className="vendor-sidebar-icon" aria-hidden>{icon}</span>
-                  {label}
+                  <span className="vendor-sidebar-label">{label}</span>
+                  {((id === 'notifications' || id === 'orders') && adminStats.pendingOrders > 0) && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${adminStats.pendingOrders} pending`}>
+                      {adminStats.pendingOrders > 99 ? '99+' : adminStats.pendingOrders}
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
@@ -691,24 +751,6 @@ const AdminDashboard = () => {
                         </tbody>
                       </table>
                     </div>
-                  )}
-                </section>
-                <section className="vendor-notifications">
-                  <h2 className="vendor-section-title">Notifications</h2>
-                  {recentOrders.length === 0 ? (
-                    <p className="vendor-empty-text">No notifications.</p>
-                  ) : (
-                    <ul className="vendor-notification-list">
-                      {recentOrders.slice(0, 3).map((order) => (
-                        <li key={order._id} className="vendor-notification-item">
-                          <span className="vendor-notification-text">
-                            {order.status === 'pending' ? `New order #${order._id.slice(-6).toUpperCase()}` : `Order #${order._id.slice(-6).toUpperCase()} updated`}
-                            {' '}({order.items?.length || 0} items)
-                          </span>
-                          <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>{order.status}</span>
-                        </li>
-                      ))}
-                    </ul>
                   )}
                 </section>
                 <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
@@ -896,9 +938,41 @@ const AdminDashboard = () => {
                 <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : activeTab === 'notifications' ? (
-              <div className="vendor-placeholder-page">
-                <h1 className="vendor-dashboard-title">Notifications</h1>
-                <p className="vendor-dashboard-overview-text">Coming soon.</p>
+              <div className="vendor-notifications-page">
+                <div className="vendor-content-header">
+                  <h1 className="vendor-dashboard-title">Notifications</h1>
+                  <p className="vendor-dashboard-greeting">New order and status alerts. Process orders from Order Management.</p>
+                </div>
+                <div className="vendor-notifications-toolbar">
+                  <label htmlFor="admin-notification-sort" className="vendor-filter-label">Sort:</label>
+                  <select
+                    id="admin-notification-sort"
+                    className="vendor-filter-select"
+                    value={notificationSort}
+                    onChange={(e) => setNotificationSort(e.target.value)}
+                  >
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                  </select>
+                  {orders.length > 0 && (
+                    <span className="vendor-notifications-count">{orders.length} notification{orders.length !== 1 ? 's' : ''}</span>
+                  )}
+                </div>
+                {orders.length === 0 ? (
+                  <p className="vendor-empty-text">No notifications yet. New orders and updates will appear here.</p>
+                ) : (
+                  <ul className="vendor-notification-list vendor-notification-list-full">
+                    {(notificationSort === 'newest' ? [...orders] : [...orders].reverse()).map((order) => (
+                      <li key={order._id} className="vendor-notification-item">
+                        <span className="vendor-notification-text">
+                          {order.status === 'pending' ? `New order #${order._id.slice(-6).toUpperCase()}` : `Order #${order._id.slice(-6).toUpperCase()} updated`}
+                          {' '}({order.items?.length || 0} items)
+                        </span>
+                        <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>{order.status}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : (
@@ -923,9 +997,10 @@ const AdminDashboard = () => {
                   {activeTab === 'products' && (
                     <div className="vendor-products-section">
                       <div className="vendor-products-header">
-                        <h2 className="vendor-products-heading">All products on the platform</h2>
-                        <button type="button" className="vendor-btn vendor-btn-primary" onClick={openAddProduct}>
-                          Add Product
+                        <h2 className="vendor-products-heading">All Products</h2>
+                        <p className="vendor-products-subtitle">Manage product listings on the platform</p>
+                        <button type="button" className="vendor-products-add-btn" onClick={openAddProduct}>
+                          <span className="vendor-products-add-icon" aria-hidden>+</span> Add Product
                         </button>
                       </div>
                       <div className="vendor-products-filters">
@@ -979,45 +1054,65 @@ const AdminDashboard = () => {
                       {products.length === 0 ? (
                         <p className="vendor-dashboard-overview-text">No products on the platform yet.</p>
                       ) : (
-                        <div className="vendor-products-list">
-                          {products.map((p) => (
-                            <div key={p._id} className="vendor-product-card">
-                              <div className="vendor-product-card-image">
-                                {p.image ? (
-                                  <img src={getImageUrl(p.image)} alt="" />
-                                ) : (
-                                  <span className="vendor-product-card-no-image">No image</span>
-                                )}
-                              </div>
-                              <div className="vendor-product-card-body">
-                                <h3 className="vendor-product-card-name">{p.name}</h3>
-                                <p className="vendor-product-card-meta">
-                                  {formatPrice(p.price)} · {CATEGORY_LABELS[p.category] || p.category} · Stock: {p.stock}
-                                  {p.vendor && (
-                                    <> · <span className="vendor-product-card-vendor">Vendor: {typeof p.vendor === 'object' ? (p.vendor.name || p.vendor.email) : '—'}</span></>
-                                  )}
-                                </p>
-                                <div className="vendor-product-card-actions">
-                                  <button
-                                    type="button"
-                                    className="vendor-btn vendor-btn-secondary"
-                                    onClick={() => openEditProduct(p)}
-                                    disabled={productFormOpen}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="vendor-btn vendor-btn-danger"
-                                    onClick={() => handleDeleteProduct(p)}
-                                    disabled={deletingProductId !== null}
-                                  >
-                                    {deletingProductId === p._id ? 'Deleting…' : 'Delete'}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                        <div className="vendor-orders-table-wrap">
+                          <table className="vendor-orders-table vendor-products-table">
+                            <thead>
+                              <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Status</th>
+                                <th>Vendor</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {products.map((p) => (
+                                <tr key={p._id}>
+                                  <td className="vendor-products-table-product">
+                                    <span className="vendor-products-table-name">{p.name}</span>
+                                    {p.description && (
+                                      <span className="vendor-products-table-desc">
+                                        {p.description.length > 60 ? `${p.description.slice(0, 60)}...` : p.description}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td>{CATEGORY_LABELS[p.category] || p.category}</td>
+                                  <td className="vendor-products-table-price">{formatPrice(p.price)}</td>
+                                  <td>{p.stock ?? 0} units</td>
+                                  <td>
+                                    <span className={`vendor-products-status vendor-products-status-${(p.stock ?? 0) > 0 ? 'in-stock' : 'out-of-stock'}`}>
+                                      {(p.stock ?? 0) > 0 ? 'In Stock' : 'Out of Stock'}
+                                    </span>
+                                  </td>
+                                  <td className="vendor-products-table-vendor">
+                                    {p.vendor && (typeof p.vendor === 'object' ? (p.vendor.name || p.vendor.email) : '—')}
+                                  </td>
+                                  <td className="vendor-products-table-actions">
+                                    <button
+                                      type="button"
+                                      className="vendor-products-action-btn vendor-products-action-edit"
+                                      onClick={() => openEditProduct(p)}
+                                      disabled={productFormOpen}
+                                      aria-label="Edit"
+                                    >
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="vendor-products-action-btn vendor-products-action-delete"
+                                      onClick={() => handleDeleteProduct(p)}
+                                      disabled={deletingProductId !== null}
+                                      aria-label="Delete"
+                                    >
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                       {productFormOpen && (
@@ -1474,7 +1569,25 @@ const AdminDashboard = () => {
                           onChange={(e) => setOrderSearchInput(e.target.value)}
                           aria-label="Search orders by customer name or email"
                         />
-                        {(orderSearchInput || orderStatusFilter || orderVendorFilter) && (
+                        <label htmlFor="admin-order-date-from" className="vendor-filter-label">From:</label>
+                        <input
+                          id="admin-order-date-from"
+                          type="date"
+                          className="vendor-filter-date"
+                          value={orderDateFrom}
+                          onChange={(e) => setOrderDateFrom(e.target.value)}
+                          aria-label="Orders from date"
+                        />
+                        <label htmlFor="admin-order-date-to" className="vendor-filter-label">To:</label>
+                        <input
+                          id="admin-order-date-to"
+                          type="date"
+                          className="vendor-filter-date"
+                          value={orderDateTo}
+                          onChange={(e) => setOrderDateTo(e.target.value)}
+                          aria-label="Orders to date"
+                        />
+                        {(orderSearchInput || orderStatusFilter || orderVendorFilter || orderDateFrom || orderDateTo) && (
                           <button
                             type="button"
                             className="vendor-search-clear"
@@ -1482,12 +1595,23 @@ const AdminDashboard = () => {
                               setOrderSearchInput('');
                               setOrderStatusFilter('');
                               setOrderVendorFilter('');
+                              setOrderDateFrom('');
+                              setOrderDateTo('');
                             }}
                             aria-label="Clear filters"
                           >
                             Clear
                           </button>
                         )}
+                        <button
+                          type="button"
+                          className="vendor-export-csv-btn"
+                          onClick={() => exportOrdersToCsv(orders, formatPrice)}
+                          disabled={orders.length === 0}
+                          aria-label="Export orders to CSV"
+                        >
+                          Export to CSV
+                        </button>
                       </div>
                       {orders.length === 0 ? (
                         <p className="vendor-dashboard-overview-text">No orders match your filters.</p>

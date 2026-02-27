@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useOrderNotification } from '../context/OrderNotificationContext';
 import Logo from './Logo';
 import './Navbar.css';
 
@@ -11,6 +12,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, hasRole } = useAuth();
   const { cartCount } = useCart();
+  const { hasUnseenOrderUpdates } = useOrderNotification();
   const isVendor = isAuthenticated() && hasRole(['vendor']);
   const isAdmin = isAuthenticated() && hasRole(['admin']);
   const isCustomer = isAuthenticated() && !isVendor && !isAdmin;
@@ -89,8 +91,11 @@ const Navbar = () => {
             )}
             {isCustomer && (
               <li className="nav-item">
-                <Link to="/orders" className={`nav-link ${location.pathname === '/orders' ? 'active' : ''}`}>
+                <Link to="/orders" className={`nav-link nav-link-orders ${location.pathname === '/orders' ? 'active' : ''}`}>
                   My Orders
+                  {hasUnseenOrderUpdates && (
+                    <span className="nav-orders-dot" aria-label="Order status updated" title="Order status updated" />
+                  )}
                 </Link>
               </li>
             )}

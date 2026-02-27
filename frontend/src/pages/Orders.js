@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { useOrderNotification } from '../context/OrderNotificationContext';
 import { getImageUrl } from '../utils/imageUrl';
 import './Orders.css';
 
@@ -63,7 +64,11 @@ const Orders = () => {
     const fetchOrders = async () => {
       try {
         const res = await axios.get('/api/orders');
-        if (!cancelled) setOrders(res.data.data || []);
+        const list = res.data.data || [];
+        if (!cancelled) {
+          setOrders(list);
+          setOrdersViewed(list);
+        }
       } catch (err) {
         if (!cancelled) setError(err.response?.data?.message || 'Failed to load orders');
       } finally {
@@ -195,6 +200,11 @@ const Orders = () => {
                         {cancellingId === order._id ? 'Cancelling…' : 'Cancel order'}
                       </button>
                     </div>
+                  )}
+                  {order.status === 'delivered' && (
+                    <Link to={`/orders/${order._id}`} className="orders-review-cta">
+                      Rate &amp; review products →
+                    </Link>
                   )}
                 </li>
               ))}

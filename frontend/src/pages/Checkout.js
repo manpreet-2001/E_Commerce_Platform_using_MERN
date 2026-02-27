@@ -86,14 +86,15 @@ const Checkout = () => {
             <section className="checkout-section">
               <h2 className="checkout-section-title">Delivery address</h2>
               <div className="checkout-fields">
-                <label>
+                <label htmlFor="checkout-fullName">
                   <span>Full name</span>
                   <input
+                    id="checkout-fullName"
                     type="text"
                     name="fullName"
                     value={address.fullName}
                     onChange={handleChange}
-                    placeholder="John Doe"
+                    placeholder="First and last name"
                     required
                   />
                 </label>

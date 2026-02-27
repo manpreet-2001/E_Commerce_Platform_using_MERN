@@ -151,13 +151,17 @@
   height: 120px;
   border-radius: 12px;
   overflow: hidden;
-  background: #f1f5f9;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .wishlist-item-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center center;
 }
 
 .wishlist-item-placeholder {

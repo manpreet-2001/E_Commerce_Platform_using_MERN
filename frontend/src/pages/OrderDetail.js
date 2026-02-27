@@ -133,6 +133,7 @@ const OrderDetail = () => {
               {order.items?.map((item, idx) => {
                 const product = item.product;
                 const productId = product?._id;
+                const isDelivered = order.status === 'delivered';
                 return (
                   <li key={idx} className="order-detail-item">
                     <Link to={productId ? `/products/${productId}` : '#'} className="order-detail-item-link">
@@ -155,11 +156,25 @@ const OrderDetail = () => {
                         </span>
                       </div>
                     </Link>
+                    {isDelivered && productId && (
+                      <Link
+                        to={`/products/${productId}#reviews`}
+                        className="order-detail-review-link"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Rate &amp; review this product
+                      </Link>
+                    )}
                   </li>
                 );
               })}
             </ul>
             <p className="order-detail-total">Total: {formatPrice(order.totalAmount)}</p>
+            {order.status === 'delivered' && (
+              <p className="order-detail-review-note">
+                Your order has been delivered. You can rate and review each product above.
+              </p>
+            )}
           </section>
 
           <section className="order-detail-section">

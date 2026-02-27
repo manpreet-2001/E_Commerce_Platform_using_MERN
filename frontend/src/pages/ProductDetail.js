@@ -74,6 +74,13 @@ const ProductDetail = () => {
     if (id && product) fetchReviews();
   }, [id, product, fetchReviews]);
 
+  useEffect(() => {
+    if (product && window.location.hash === '#reviews') {
+      const el = document.getElementById('reviews');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [product]);
+
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     setReviewError('');
@@ -285,7 +292,7 @@ const ProductDetail = () => {
               )}
 
               {/* Ratings & Reviews */}
-              <section className="product-detail-reviews" aria-labelledby="reviews-heading">
+              <section id="reviews" className="product-detail-reviews" aria-labelledby="reviews-heading">
                 <h2 id="reviews-heading" className="product-detail-reviews-title">
                   Reviews {reviewStats.count > 0 && `(${reviewStats.count})`}
                 </h2>

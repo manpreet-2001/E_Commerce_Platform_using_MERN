@@ -89,10 +89,10 @@ const Wishlist = () => {
                         <button
                           type="button"
                           className="wishlist-btn wishlist-btn-cart"
-                          onClick={(e) => handleAddToCart(id, e)}
-                          disabled={!inStock || addingId === id}
+                          onClick={(e) => handleMoveToCart(id, e)}
+                          disabled={!inStock || movingId === id}
                         >
-                          {addingId === id ? 'Adding…' : 'Add to Cart'}
+                          {movingId === id ? 'Moving…' : 'Move to cart'}
                         </button>
                         <button
                           type="button"

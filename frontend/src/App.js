@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { OrderNotificationProvider } from './context/OrderNotificationContext';
 import VendorRoute from './components/VendorRoute';
 import AdminRoute from './components/AdminRoute';
 import Login from './pages/Login';
@@ -40,6 +41,7 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <WishlistProvider>
+        <OrderNotificationProvider>
         <Router>
           <Routes>
             <Route path="/login" element={
@@ -84,6 +86,7 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
+        </OrderNotificationProvider>
         </WishlistProvider>
         </CartProvider>
     </AuthProvider>

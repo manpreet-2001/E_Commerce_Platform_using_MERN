@@ -69,6 +69,20 @@
   font-weight: 600;
 }
 
+.nav-link-orders {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-orders-dot {
+  width: 8px;
+  height: 8px;
+  background: #dc2626;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .nav-actions {
   display: flex;
   align-items: center;

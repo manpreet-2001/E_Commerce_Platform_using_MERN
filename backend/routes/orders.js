@@ -69,13 +69,22 @@ async function getProductIdsByVendor(vendorId) {
 }
 
 // @route   GET /api/orders/admin/all
-// @desc    Get all orders on the platform (admin only). Optional: ?status=, ?vendor=, ?sort=, ?search=
+// @desc    Get all orders on the platform (admin only). Optional: ?status=, ?vendor=, ?sort=, ?search=, ?from=YYYY-MM-DD, ?to=YYYY-MM-DD
 // @access  Private (admin)
 router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
   try {
-    const { status, vendor, sort, search } = req.query;
+    const { status, vendor, sort, search, from, to } = req.query;
 
     const filter = {};
+
+    if (from && typeof from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(from.trim())) {
+      filter.createdAt = filter.createdAt || {};
+      filter.createdAt.$gte = new Date(from.trim() + 'T00:00:00.000Z');
+    }
+    if (to && typeof to === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(to.trim())) {
+      filter.createdAt = filter.createdAt || {};
+      filter.createdAt.$lte = new Date(to.trim() + 'T23:59:59.999Z');
+    }
 
     if (status && typeof status === 'string' && ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].includes(status.trim())) {
       filter.status = status.trim();
