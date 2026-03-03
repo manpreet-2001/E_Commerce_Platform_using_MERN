@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { computeVendorStats } from '../utils/vendorStats';
 import VendorProductForm from '../components/VendorProductForm';
 import { getImageUrl } from '../utils/imageUrl';
+import { getPasswordErrorMessage } from '../utils/passwordStrength';
 import './VendorDashboard.css';
 
 const CATEGORY_LABELS = {
@@ -69,6 +70,11 @@ const VendorDashboard = () => {
   const [profileFormEmail, setProfileFormEmail] = useState('');
   const [profileFormError, setProfileFormError] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [vendorOrderStatusFilter, setVendorOrderStatusFilter] = useState('');
   const [vendorOrderSearchInput, setVendorOrderSearchInput] = useState('');
   const [vendorOrderSearchQuery, setVendorOrderSearchQuery] = useState('');
@@ -237,6 +243,35 @@ const VendorDashboard = () => {
       setProfileFormError(err.response?.data?.message || 'Failed to update profile.');
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess(false);
+    const current = (passwordForm.currentPassword || '').trim();
+    const newP = (passwordForm.newPassword || '').trim();
+    const confirm = (passwordForm.confirmPassword || '').trim();
+    const currentErr = !current ? 'Current password is required.' : '';
+    const newErr = !newP ? 'New password is required.' : (getPasswordErrorMessage(newP) || '');
+    const confirmErr = newP && newP !== confirm ? 'New password and confirmation do not match.' : '';
+    setPasswordFieldErrors({ currentPassword: currentErr, newPassword: newErr, confirmPassword: confirmErr });
+    if (currentErr || newErr || confirmErr) return;
+    setPasswordSaving(true);
+    try {
+      await axios.put('/api/auth/password', { currentPassword: current, newPassword: newP });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordFieldErrors({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordSuccess(true);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update password.';
+      setPasswordError(msg);
+      if (msg.toLowerCase().includes('current') || msg.toLowerCase().includes('incorrect')) {
+        setPasswordFieldErrors((prev) => ({ ...prev, currentPassword: msg }));
+      }
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -521,6 +556,7 @@ const VendorDashboard = () => {
                           <th>Rating</th>
                           <th>Comment</th>
                           <th>Date</th>
+                          <th>View</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -534,6 +570,20 @@ const VendorDashboard = () => {
                             <td>{r.rating}/5</td>
                             <td className="vendor-review-comment-cell">{r.comment || '—'}</td>
                             <td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}</td>
+                            <td>
+                              {r.product?._id ? (
+                                <Link
+                                  to={`/products/${r.product._id}`}
+                                  className="vendor-review-view-btn"
+                                  title="View product"
+                                  aria-label={`View product ${r.product?.name || ''}`}
+                                >
+                                  <span className="vendor-review-view-icon" aria-hidden="true">👁</span>
+                                </Link>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -620,6 +670,58 @@ const VendorDashboard = () => {
                       </div>
                     </>
                   )}
+                </section>
+                <section className="vendor-profile-card vendor-password-card">
+                  <h2 className="vendor-password-heading">Change password</h2>
+                  <form onSubmit={handlePasswordSubmit} className="vendor-password-form" aria-label="Change password">
+                    {passwordError && <p className="vendor-dashboard-error" role="alert">{passwordError}</p>}
+                    {passwordSuccess && <p className="vendor-password-success" role="status">Password updated successfully.</p>}
+                    <div className="vendor-product-form-group">
+                      <label htmlFor="vendor-current-password">Current password</label>
+                      <input
+                        id="vendor-current-password"
+                        type="password"
+                        className={`vendor-search-input ${passwordFieldErrors.currentPassword ? 'vendor-input-invalid' : ''}`}
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => { setPasswordForm((p) => ({ ...p, currentPassword: e.target.value })); setPasswordFieldErrors((p) => ({ ...p, currentPassword: '' })); }}
+                        placeholder="Enter current password"
+                        autoComplete="current-password"
+                        disabled={passwordSaving}
+                      />
+                      {passwordFieldErrors.currentPassword && <p className="vendor-field-error">{passwordFieldErrors.currentPassword}</p>}
+                    </div>
+                    <div className="vendor-product-form-group">
+                      <label htmlFor="vendor-new-password">New password</label>
+                      <input
+                        id="vendor-new-password"
+                        type="password"
+                        className={`vendor-search-input ${passwordFieldErrors.newPassword ? 'vendor-input-invalid' : ''}`}
+                        value={passwordForm.newPassword}
+                        onChange={(e) => { setPasswordForm((p) => ({ ...p, newPassword: e.target.value })); setPasswordFieldErrors((p) => ({ ...p, newPassword: '' })); }}
+                        placeholder="Enter new password"
+                        autoComplete="new-password"
+                        disabled={passwordSaving}
+                      />
+                      {passwordFieldErrors.newPassword && <p className="vendor-field-error">{passwordFieldErrors.newPassword}</p>}
+                    </div>
+                    <div className="vendor-product-form-group">
+                      <label htmlFor="vendor-confirm-password">Confirm new password</label>
+                      <input
+                        id="vendor-confirm-password"
+                        type="password"
+                        className={`vendor-search-input ${passwordFieldErrors.confirmPassword ? 'vendor-input-invalid' : ''}`}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => { setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value })); setPasswordFieldErrors((p) => ({ ...p, confirmPassword: '' })); }}
+                        placeholder="Confirm new password"
+                        autoComplete="new-password"
+                        disabled={passwordSaving}
+                      />
+                      {passwordFieldErrors.confirmPassword && <p className="vendor-field-error">{passwordFieldErrors.confirmPassword}</p>}
+                    </div>
+                    <button type="submit" className="vendor-btn vendor-btn-primary" disabled={passwordSaving}>
+                      {passwordSaving ? 'Updating…' : 'Update password'}
+                    </button>
+                  </form>
                 </section>
               </div>
             ) : activeTab === 'notifications' ? (

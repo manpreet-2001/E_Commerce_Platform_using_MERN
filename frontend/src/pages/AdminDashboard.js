@@ -1177,7 +1177,6 @@ const AdminDashboard = () => {
                   )}
                   {activeTab === 'reviews' && (
                     <div className="vendor-orders-section">
-                      <h2 className="vendor-orders-heading">All reviews — add, edit, or remove</h2>
                       {reviews.length === 0 ? (
                         <p className="vendor-empty-text">No reviews on the platform yet.</p>
                       ) : (
@@ -1190,6 +1189,7 @@ const AdminDashboard = () => {
                                 <th>Rating</th>
                                 <th>Comment</th>
                                 <th>Date</th>
+                                <th>View</th>
                                 <th>Actions</th>
                               </tr>
                             </thead>
@@ -1204,6 +1204,20 @@ const AdminDashboard = () => {
                                   <td>{r.rating}/5</td>
                                   <td className="vendor-review-comment-cell">{r.comment || '—'}</td>
                                   <td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}</td>
+                                  <td>
+                                    {r.product?._id ? (
+                                      <Link
+                                        to={`/products/${r.product._id}`}
+                                        className="vendor-review-view-btn"
+                                        title="View product"
+                                        aria-label={`View product ${r.product?.name || ''}`}
+                                      >
+                                        <span className="vendor-review-view-icon" aria-hidden="true">👁</span>
+                                      </Link>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </td>
                                   <td>
                                     <button
                                       type="button"

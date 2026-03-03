@@ -218,6 +218,41 @@
   margin-top: 0;
 }
 
+.vendor-password-card {
+  margin-top: 24px;
+}
+
+.vendor-password-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 16px 0;
+}
+
+.vendor-password-form .vendor-product-form-group {
+  margin-bottom: 16px;
+}
+
+.vendor-password-form .vendor-product-form-group:last-of-type {
+  margin-bottom: 20px;
+}
+
+.vendor-password-success {
+  color: #059669;
+  font-size: 0.9375rem;
+  margin-bottom: 12px;
+}
+
+.vendor-input-invalid {
+  border-color: #dc2626 !important;
+}
+
+.vendor-field-error {
+  font-size: 0.8125rem;
+  color: #dc2626;
+  margin: 4px 0 0 0;
+}
+
 .vendor-placeholder-page .vendor-dashboard-title {
   margin-bottom: 12px;
 }
@@ -1215,6 +1250,30 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.vendor-review-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.vendor-review-view-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+.vendor-review-view-icon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .admin-reviews-table .vendor-btn-sm {

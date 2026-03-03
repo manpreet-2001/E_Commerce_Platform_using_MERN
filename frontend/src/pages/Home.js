@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import './Home.css';
 
 const HERO_SLIDES = [
@@ -201,34 +202,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* E-commerce Footer */}
-      <footer className="home-footer">
-        <div className="home-footer-inner">
-          <div className="home-footer-grid">
-            <div className="home-footer-col">
-              <h3 className="home-footer-heading">Shop</h3>
-              <Link to="/products" className="home-footer-link">All Products</Link>
-              <Link to="/products?category=phones" className="home-footer-link">Phones</Link>
-              <Link to="/products?category=laptops" className="home-footer-link">Laptops</Link>
-              <Link to="/products?category=electronics" className="home-footer-link">Electronics</Link>
-            </div>
-            <div className="home-footer-col">
-              <h3 className="home-footer-heading">Support</h3>
-              <span className="home-footer-link">Shipping Info</span>
-              <span className="home-footer-link">Returns</span>
-              <span className="home-footer-link">FAQ</span>
-            </div>
-            <div className="home-footer-col">
-              <h3 className="home-footer-heading">Company</h3>
-              <span className="home-footer-link">About Us</span>
-              <span className="home-footer-link">Contact</span>
-            </div>
-          </div>
-          <div className="home-footer-bottom">
-            <p className="home-footer-text">© {new Date().getFullYear()} CityTech. Quality products, trusted service.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

@@ -33,7 +33,7 @@ const ProductDetail = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 });
-  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState('');
@@ -84,10 +84,14 @@ const ProductDetail = () => {
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     setReviewError('');
+    if (!reviewRating || reviewRating < 1 || reviewRating > 5) {
+      setReviewError('Please choose a rating (1–5 stars) before submitting.');
+      return;
+    }
     setReviewSubmitting(true);
     try {
       await axios.post(`/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment.trim() });
-      setReviewRating(5);
+      setReviewRating(0);
       setReviewComment('');
       await fetchReviews();
     } catch (err) {
@@ -308,7 +312,7 @@ const ProductDetail = () => {
                     <p className="product-detail-review-form-title">Write a review</p>
                     {reviewError && <p className="product-detail-review-error" role="alert">{reviewError}</p>}
                     <div className="product-detail-review-rating">
-                      <span className="product-detail-review-rating-label">Rating</span>
+                      <span className="product-detail-review-rating-label">Rating (required)</span>
                       <StarRating
                         rating={reviewRating}
                         interactive
@@ -328,7 +332,7 @@ const ProductDetail = () => {
                         className="product-detail-review-textarea"
                       />
                     </div>
-                    <button type="submit" className="btn-add-to-cart product-detail-review-submit" disabled={reviewSubmitting}>
+                    <button type="submit" className="btn-add-to-cart product-detail-review-submit" disabled={reviewSubmitting || reviewRating < 1}>
                       {reviewSubmitting ? 'Submitting…' : 'Submit review'}
                     </button>
                   </form>

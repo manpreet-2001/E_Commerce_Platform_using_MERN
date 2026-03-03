@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
 import './About.css';
 
@@ -60,6 +61,7 @@ const About = () => {
           <Link to="/products" className="about-cta">Shop now</Link>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

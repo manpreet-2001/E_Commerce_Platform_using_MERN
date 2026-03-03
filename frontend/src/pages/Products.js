@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import ProductCard from '../components/ProductCard';
+import Footer from '../components/Footer';
 import './Products.css';
 
 const CATEGORIES = [
@@ -195,6 +196,7 @@ const Products = () => {
           )}
         </div>
       </main>
+      <Footer />
     </div>
   );
 };
