@@ -1,14 +1,15 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { isConfigured: useCloudinary } = require('../config/cloudinary');
 
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 
-if (!fs.existsSync(uploadsDir)) {
+if (!useCloudinary && !fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
+const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
@@ -23,6 +24,8 @@ const storage = multer.diskStorage({
     cb(null, unique);
   }
 });
+
+const storage = useCloudinary ? multer.memoryStorage() : diskStorage;
 
 const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 

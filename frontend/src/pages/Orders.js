@@ -38,6 +38,7 @@ const Orders = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, loading: authLoading, hasRole } = useAuth();
+  const { setOrdersViewed } = useOrderNotification();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
