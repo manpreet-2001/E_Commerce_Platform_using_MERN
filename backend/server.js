@@ -13,9 +13,21 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
 
 const app = express();
 
-// Middleware – allow frontend origin in production (set FRONTEND_URL when you deploy)
+// Middleware – allow frontend origin (browser sends origin without trailing slash; normalize for match)
+const allowedOrigin = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : null;
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || true,
+  origin: (origin, cb) => {
+    if (!allowedOrigin) {
+      cb(null, true);
+      return;
+    }
+    const normalized = origin ? origin.replace(/\/$/, '') : '';
+    if (normalized === allowedOrigin) {
+      cb(null, true);
+      return;
+    }
+    cb(null, false);
+  },
   credentials: true
 };
 app.use(cors(corsOptions));

@@ -3,8 +3,15 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-// Configure axios base URL: use env var or empty (empty = same origin, proxy in dev)
-axios.defaults.baseURL = process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_URL || '';
+// Configure axios base URL: env at build time, or production fallback when served from Render frontend
+const apiBase =
+  process.env.REACT_APP_API_BASE ||
+  process.env.REACT_APP_API_URL ||
+  (typeof window !== 'undefined' &&
+   window.location.hostname === 'citytechstore-frontend.onrender.com'
+    ? 'https://e-commerce-platform-using-mern.onrender.com'
+    : '');
+axios.defaults.baseURL = apiBase;
 
 // Axios interceptor to always add token from localStorage to requests
 axios.interceptors.request.use(
