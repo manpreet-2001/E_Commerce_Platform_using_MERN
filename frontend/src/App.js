@@ -8,6 +8,8 @@ import VendorRoute from './components/VendorRoute';
 import AdminRoute from './components/AdminRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import HomePage from './pages/Home';
@@ -16,6 +18,8 @@ import Contact from './pages/Contact';
 import Shipping from './pages/Shipping';
 import Returns from './pages/Returns';
 import FAQ from './pages/FAQ';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
@@ -57,6 +61,12 @@ function App() {
                 <Register />
               </GuestRoute>
             } />
+            <Route path="/forgot-password" element={
+              <GuestRoute>
+                <ForgotPassword />
+              </GuestRoute>
+            } />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/about" element={<About />} />
@@ -64,6 +74,8 @@ function App() {
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/returns" element={<Returns />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/wishlist" element={
               <PrivateRoute>

@@ -182,6 +182,26 @@ function sendWelcomeEmail(user) {
   sendEmail(to, subject, html).catch((err) => console.error('Welcome email error:', err.message || err));
 }
 
+/**
+ * Send password reset email with link to set new password.
+ * @param {string} to - Recipient email
+ * @param {string} resetLink - Full URL to reset password page (e.g. FRONTEND_URL/reset-password?token=xxx)
+ * @param {string} [name] - User name for greeting
+ */
+function sendPasswordResetEmail(to, resetLink, name) {
+  if (!isConfigured || !to || !resetLink) return;
+  const subject = 'Reset your CityTech password';
+  const greeting = name ? `Hi ${name},` : 'Hi,';
+  const html = `
+    <p>${greeting}</p>
+    <p>You requested a password reset. Click the link below to set a new password (link expires in 1 hour):</p>
+    <p><a href="${resetLink}">${resetLink}</a></p>
+    <p>If you didn't request this, you can ignore this email. Your password will not be changed.</p>
+    <p>—<br/>The CityTech Team</p>
+  `;
+  sendEmail(to, subject, html).catch((err) => console.error('Password reset email error:', err.message || err));
+}
+
 module.exports = {
   isConfigured,
   sendEmail,
@@ -189,4 +209,5 @@ module.exports = {
   sendOrderPlacedEmail,
   sendNewUserNotifyEmail,
   sendWelcomeEmail,
+  sendPasswordResetEmail,
 };
