@@ -11,8 +11,14 @@ const REGISTRATION_NOTIFY_EMAIL = process.env.REGISTRATION_NOTIFY_EMAIL || MAIL_
 
 const isConfigured = !!(SMTP_HOST && SMTP_USER && SMTP_PASS);
 
-if (process.env.NODE_ENV !== 'production' && !isConfigured) {
-  console.log('📧 Email: SMTP not configured (set SMTP_HOST, SMTP_USER, SMTP_PASS in .env to send emails).');
+if (!isConfigured) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('📧 Email: SMTP not configured (set SMTP_HOST, SMTP_USER, SMTP_PASS in .env to send emails).');
+  } else {
+    console.log('📧 Email: SMTP not configured on host. Add SMTP_HOST, SMTP_USER, SMTP_PASS (and optionally MAIL_FROM, FRONTEND_URL, REGISTRATION_NOTIFY_EMAIL) in your host environment.');
+  }
+} else if (process.env.NODE_ENV === 'production') {
+  console.log('📧 Email: SMTP configured (emails will be sent).');
 }
 
 let transporter = null;
@@ -50,6 +56,9 @@ async function sendEmail(to, subject, html) {
     });
   } catch (err) {
     console.error('Email send failed:', err.message || err);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Email error code:', err.code);
+    }
   }
 }
 
