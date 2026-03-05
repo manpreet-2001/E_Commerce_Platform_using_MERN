@@ -19,7 +19,11 @@ export const getImageUrl = (imageUrl) => {
   const isRelativePath = trimmedUrl.startsWith('/') || trimmedUrl.startsWith('uploads/');
   if (isRelativePath) {
     const pathWithSlash = trimmedUrl.startsWith('/') ? trimmedUrl : `/${trimmedUrl}`;
-    const backendUrl = process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_URL || '';
+    let backendUrl = process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_URL || '';
+    // Production fallback: when served from Render frontend, use backend URL so images load even if env wasn't set at build time
+    if (!backendUrl && typeof window !== 'undefined' && window.location.hostname === 'citytechstore-frontend.onrender.com') {
+      backendUrl = 'https://e-commerce-platform-using-mern.onrender.com';
+    }
 
     if (!backendUrl) {
       console.error('❌ REACT_APP_API_BASE environment variable is not set!');
