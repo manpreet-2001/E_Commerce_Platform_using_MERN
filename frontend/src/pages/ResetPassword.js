@@ -5,10 +5,21 @@ import Navbar from '../components/Navbar';
 import { getPasswordRuleResults, isPasswordStrong, getPasswordErrorMessage } from '../utils/passwordStrength';
 import './Auth.css';
 
+// Get token from URL so reset form shows when opening link from email (fallback if useSearchParams is empty)
+function getTokenFromUrl(searchParams) {
+  const fromParams = searchParams.get('token') || '';
+  if (fromParams) return fromParams;
+  if (typeof window !== 'undefined' && window.location.search) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('token') || '';
+  }
+  return '';
+}
+
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const tokenFromUrl = searchParams.get('token') || '';
+  const tokenFromUrl = getTokenFromUrl(searchParams);
 
   const [formData, setFormData] = useState({
     newPassword: '',
@@ -120,15 +131,15 @@ const ResetPassword = () => {
       <Navbar />
 
       <div className="auth-hero">
-        <h1>Set new password</h1>
-        <p>Enter your new password below</p>
+        <h1>Reset password</h1>
+        <p>Enter your new password and confirm it below</p>
       </div>
 
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-header">
-            <h2>New password</h2>
-            <p>Choose a strong password and confirm it</p>
+            <h2>Reset your password</h2>
+            <p>Enter a new password below and confirm it. This link is valid for 1 hour.</p>
           </div>
 
           {error && <div className="auth-alert auth-alert-error">{error}</div>}
