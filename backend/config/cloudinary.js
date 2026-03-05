@@ -34,8 +34,11 @@ async function uploadBuffer(buffer, mimetype, folder = 'ecommerce') {
   return { url: result.secure_url, publicId: result.public_id };
 }
 
+// Use Cloudinary when credentials are set, unless USE_CLOUDINARY is explicitly 'false'
+const useCloudinary = isConfigured && process.env.USE_CLOUDINARY !== 'false';
+
 module.exports = {
   cloudinary,
-  isConfigured: isConfigured && process.env.USE_CLOUDINARY === 'true',
+  isConfigured: useCloudinary,
   uploadBuffer
 };

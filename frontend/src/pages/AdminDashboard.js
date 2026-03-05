@@ -243,8 +243,11 @@ const AdminDashboard = () => {
     const load = async () => {
       setLoading(true);
       setError('');
-      await Promise.all([fetchProducts(), fetchOrders(), fetchVendors(), fetchUsers(), fetchReviews()]);
+      // Overview needs products, orders, vendors, users; show UI as soon as they're ready
+      await Promise.all([fetchProducts(), fetchOrders(), fetchVendors(), fetchUsers()]);
       if (!cancelled) setLoading(false);
+      // Load reviews in background so Reviews tab populates without blocking first paint
+      fetchReviews();
     };
     load();
     return () => { cancelled = true; };

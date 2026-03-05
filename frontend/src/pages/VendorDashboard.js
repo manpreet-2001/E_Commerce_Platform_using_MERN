@@ -134,8 +134,11 @@ const VendorDashboard = () => {
     const load = async () => {
       setLoading(true);
       setError('');
-      await Promise.all([fetchProducts(), fetchOrders(), fetchReviews()]);
+      // Overview only needs products + orders; show UI as soon as they're ready
+      await Promise.all([fetchProducts(), fetchOrders()]);
       if (!cancelled) setLoading(false);
+      // Load reviews in background so Reviews tab populates without blocking first paint
+      fetchReviews();
     };
     load();
     return () => { cancelled = true; };

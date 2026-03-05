@@ -4,6 +4,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
+const { sendOrderStatusEmail } = require('../utils/emailService');
 
 // @route   GET /api/orders/vendor/mine
 // @desc    Get orders that contain at least one product from the current vendor. Optional: ?status=, ?search= (customer name/email)
@@ -290,6 +291,7 @@ router.patch('/:id/cancel', protect, async (req, res) => {
     const populated = await Order.findById(order._id)
       .populate('user', 'name email')
       .populate({ path: 'items.product', select: 'name price image' });
+    sendOrderStatusEmail(populated, 'cancelled');
     res.json({ success: true, message: 'Order cancelled', data: populated });
   } catch (error) {
     console.error('PATCH /api/orders/:id/cancel error:', error.message || error);
@@ -327,6 +329,7 @@ router.patch('/:id/status', protect, async (req, res) => {
     const populated = await Order.findById(order._id)
       .populate('user', 'name email')
       .populate({ path: 'items.product', select: 'name price image vendor' });
+    sendOrderStatusEmail(populated, status);
     res.json({ success: true, data: populated });
   } catch (error) {
     console.error('PATCH /api/orders/:id/status error:', error.message || error);

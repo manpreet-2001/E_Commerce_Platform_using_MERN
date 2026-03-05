@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const { protect, authorize } = require('../middleware/auth');
+const { sendNewUserNotifyEmail } = require('../utils/emailService');
 
 const PASSWORD_RULES = [
   { test: (p) => p.length >= 8, message: 'At least 8 characters' },
@@ -109,6 +110,8 @@ router.post('/register', async (req, res) => {
       password: trimmedPassword,
       role: normalizedRole
     });
+
+    sendNewUserNotifyEmail(user);
 
     // Generate token
     const token = generateToken(user._id);
