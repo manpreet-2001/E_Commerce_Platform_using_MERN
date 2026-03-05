@@ -25,7 +25,7 @@ export const OrderNotificationProvider = ({ children }) => {
       return;
     }
     let cancelled = false;
-    const fetchOrders = async () => {
+    const fetch = async () => {
       try {
         const res = await axios.get('/api/orders');
         if (!cancelled && res.data?.data) setOrders(Array.isArray(res.data.data) ? res.data.data : []);
@@ -33,8 +33,15 @@ export const OrderNotificationProvider = ({ children }) => {
         if (!cancelled) setOrders([]);
       }
     };
-    fetchOrders();
-    return () => { cancelled = true; };
+    fetch();
+    const interval = setInterval(fetch, 60000);
+    const onFocus = () => fetch();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [isCustomer]);
 
   const setOrdersViewed = useCallback((ordersList) => {

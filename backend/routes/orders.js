@@ -4,7 +4,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
-const { sendOrderStatusEmail } = require('../utils/emailService');
+const { sendOrderStatusEmail, sendOrderPlacedEmail } = require('../utils/emailService');
 
 // @route   GET /api/orders/vendor/mine
 // @desc    Get orders that contain at least one product from the current vendor. Optional: ?status=, ?search= (customer name/email)
@@ -206,6 +206,8 @@ router.post('/', protect, async (req, res) => {
     const populated = await Order.findById(order._id)
       .populate('user', 'name email')
       .populate({ path: 'items.product', select: 'name price image vendor' });
+
+    sendOrderPlacedEmail(populated);
 
     res.status(201).json({
       success: true,
