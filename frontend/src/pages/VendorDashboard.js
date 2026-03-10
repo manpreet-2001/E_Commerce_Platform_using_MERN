@@ -16,10 +16,14 @@ import {
 } from 'recharts';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { useReviewNotification } from '../context/ReviewNotificationContext';
 import { computeVendorStats } from '../utils/vendorStats';
 import VendorProductForm from '../components/VendorProductForm';
 import { getPasswordErrorMessage } from '../utils/passwordStrength';
 import './VendorDashboard.css';
+
+const ORDERS_VIEWED_KEY_VENDOR = 'vendorOrdersLastViewedAt';
+const NOTIFICATIONS_VIEWED_KEY_VENDOR = 'vendorNotificationsLastViewedAt';
 
 const CATEGORY_LABELS = {
   electronics: 'Electronics',
@@ -54,6 +58,7 @@ const VENDOR_SIDEBAR_NAV = [
 
 const VendorDashboard = () => {
   const { user, refreshUser } = useAuth();
+  const { hasUnseenReviewUpdates, unseenReviewCount, markReviewsViewed } = useReviewNotification();
   const [activeTab, setActiveTab] = useState('overview');
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -82,6 +87,20 @@ const VendorDashboard = () => {
   const [vendorProductSearchQuery, setVendorProductSearchQuery] = useState('');
   const [reviews, setReviews] = useState([]);
   const [notificationSort, setNotificationSort] = useState('newest');
+  const [ordersLastViewedAt, setOrdersLastViewedAt] = useState(() => {
+    try {
+      return parseInt(localStorage.getItem(ORDERS_VIEWED_KEY_VENDOR) || '0', 10);
+    } catch {
+      return 0;
+    }
+  });
+  const [notificationsLastViewedAt, setNotificationsLastViewedAt] = useState(() => {
+    try {
+      return parseInt(localStorage.getItem(NOTIFICATIONS_VIEWED_KEY_VENDOR) || '0', 10);
+    } catch {
+      return 0;
+    }
+  });
 
   useEffect(() => {
     const t = setTimeout(() => setVendorOrderSearchQuery(vendorOrderSearchInput.trim()), 400);
@@ -128,6 +147,43 @@ const VendorDashboard = () => {
     }
   }, []);
 
+  const markOrdersViewed = useCallback(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    const maxUpdated = Math.max(
+      ...orders.map((o) => new Date(o.updatedAt || o.createdAt || 0).getTime())
+    );
+    setOrdersLastViewedAt(maxUpdated);
+    try {
+      localStorage.setItem(ORDERS_VIEWED_KEY_VENDOR, String(maxUpdated));
+    } catch {
+      // ignore
+    }
+  }, [orders]);
+
+  const markNotificationsViewed = useCallback(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    const maxUpdated = Math.max(
+      ...orders.map((o) => new Date(o.updatedAt || o.createdAt || 0).getTime())
+    );
+    setNotificationsLastViewedAt(maxUpdated);
+    try {
+      localStorage.setItem(NOTIFICATIONS_VIEWED_KEY_VENDOR, String(maxUpdated));
+    } catch {
+      // ignore
+    }
+  }, [orders]);
+
+  // Auto-clear review popup/badge when Reviews tab is opened
+  useEffect(() => {
+    if (activeTab === 'reviews') markReviewsViewed();
+  }, [activeTab, markReviewsViewed]);
+
+  // Auto-clear popups when their tab is opened
+  useEffect(() => {
+    if (activeTab === 'orders') markOrdersViewed();
+    if (activeTab === 'notifications') markNotificationsViewed();
+  }, [activeTab, markOrdersViewed, markNotificationsViewed]);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -147,6 +203,21 @@ const VendorDashboard = () => {
     () => computeVendorStats(products, orders),
     [products, orders]
   );
+
+  const unseenOrderCount = useMemo(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return 0;
+    if (ordersLastViewedAt <= 0) return orders.length;
+    return orders.filter((o) => new Date(o.updatedAt || o.createdAt || 0).getTime() > ordersLastViewedAt).length;
+  }, [orders, ordersLastViewedAt]);
+
+  const unseenNotificationCount = useMemo(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return 0;
+    if (notificationsLastViewedAt <= 0) return orders.length;
+    return orders.filter((o) => new Date(o.updatedAt || o.createdAt || 0).getTime() > notificationsLastViewedAt).length;
+  }, [orders, notificationsLastViewedAt]);
+
+  const hasUnseenOrderUpdates = unseenOrderCount > 0;
+  const hasUnseenNotificationUpdates = unseenNotificationCount > 0;
 
   const todaySales = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -306,11 +377,39 @@ const VendorDashboard = () => {
                   key={id}
                   type="button"
                   className={`vendor-sidebar-item ${activeTab === id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(id)}
+                  onClick={() => {
+                    setActiveTab(id);
+                    if (id === 'reviews') markReviewsViewed();
+                    if (id === 'orders') markOrdersViewed();
+                    if (id === 'notifications') markNotificationsViewed();
+                  }}
                 >
                   <span className="vendor-sidebar-icon" aria-hidden>{icon}</span>
-                  <span className="vendor-sidebar-label">{label}</span>
-                  {((id === 'notifications' || id === 'orders') && vendorStats.pendingOrders > 0) && (
+                  <span className="vendor-sidebar-label">
+                    {label}
+                    {(id === 'reviews' && hasUnseenReviewUpdates) ? ` (${unseenReviewCount > 99 ? '99+' : unseenReviewCount})` : ''}
+                  </span>
+                  {(id === 'reviews' && hasUnseenReviewUpdates) && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${unseenReviewCount} new review${unseenReviewCount !== 1 ? 's' : ''}`}>
+                      {unseenReviewCount > 99 ? '99+' : unseenReviewCount}
+                    </span>
+                  )}
+                  {(id === 'orders' && hasUnseenOrderUpdates) && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${unseenOrderCount} new order update${unseenOrderCount !== 1 ? 's' : ''}`}>
+                      {unseenOrderCount > 99 ? '99+' : unseenOrderCount}
+                    </span>
+                  )}
+                  {(id === 'notifications' && hasUnseenNotificationUpdates) && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${unseenNotificationCount} new notification${unseenNotificationCount !== 1 ? 's' : ''}`}>
+                      {unseenNotificationCount > 99 ? '99+' : unseenNotificationCount}
+                    </span>
+                  )}
+                  {id === 'orders' && !hasUnseenOrderUpdates && vendorStats.pendingOrders > 0 && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${vendorStats.pendingOrders} pending`}>
+                      {vendorStats.pendingOrders > 99 ? '99+' : vendorStats.pendingOrders}
+                    </span>
+                  )}
+                  {id === 'notifications' && !hasUnseenNotificationUpdates && vendorStats.pendingOrders > 0 && (
                     <span className="vendor-sidebar-notification-badge" aria-label={`${vendorStats.pendingOrders} pending`}>
                       {vendorStats.pendingOrders > 99 ? '99+' : vendorStats.pendingOrders}
                     </span>
@@ -327,6 +426,69 @@ const VendorDashboard = () => {
         <main className="vendor-dashboard-main">
           <div className="vendor-dashboard-inner">
             {error && <div className="vendor-dashboard-error">{error}</div>}
+            {(hasUnseenReviewUpdates && activeTab !== 'reviews') && (
+              <div className="vendor-dashboard-notice" role="status" aria-live="polite">
+                <span>You have {unseenReviewCount} new review{unseenReviewCount !== 1 ? 's' : ''}.</span>
+                <span className="vendor-dashboard-notice-actions">
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-primary"
+                    onClick={() => { setActiveTab('reviews'); markReviewsViewed(); }}
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-secondary"
+                    onClick={() => markReviewsViewed()}
+                  >
+                    Dismiss
+                  </button>
+                </span>
+              </div>
+            )}
+            {(hasUnseenOrderUpdates && activeTab !== 'orders') && (
+              <div className="vendor-dashboard-notice" role="status" aria-live="polite">
+                <span>You have {unseenOrderCount} new order update{unseenOrderCount !== 1 ? 's' : ''}.</span>
+                <span className="vendor-dashboard-notice-actions">
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-primary"
+                    onClick={() => { setActiveTab('orders'); markOrdersViewed(); }}
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-secondary"
+                    onClick={() => markOrdersViewed()}
+                  >
+                    Dismiss
+                  </button>
+                </span>
+              </div>
+            )}
+            {(hasUnseenNotificationUpdates && activeTab !== 'notifications') && (
+              <div className="vendor-dashboard-notice" role="status" aria-live="polite">
+                <span>You have {unseenNotificationCount} new notification{unseenNotificationCount !== 1 ? 's' : ''}.</span>
+                <span className="vendor-dashboard-notice-actions">
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-primary"
+                    onClick={() => { setActiveTab('notifications'); markNotificationsViewed(); }}
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-secondary"
+                    onClick={() => markNotificationsViewed()}
+                  >
+                    Dismiss
+                  </button>
+                </span>
+              </div>
+            )}
 
             {loading ? (
               <div className="vendor-dashboard-loading">Loading…</div>

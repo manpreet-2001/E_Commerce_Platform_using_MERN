@@ -12,6 +12,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, hasRole } = useAuth();
   const { cartCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const { hasUnseenOrderUpdates } = useOrderNotification();
   const isVendor = isAuthenticated() && hasRole(['vendor']);
   const isAdmin = isAuthenticated() && hasRole(['admin']);
@@ -114,6 +115,20 @@ const Navbar = () => {
                 {cartCount > 0 && <span className="nav-cart-badge">{cartCount > 99 ? '99+' : cartCount}</span>}
               </Link>
             )}
+            {isAuthenticated() && (
+              <Link
+                to="/wishlist"
+                className="nav-cart-link nav-wishlist-link"
+                aria-label={`Wishlist, ${wishlistCount || 0} items`}
+                title="Wishlist"
+              >
+                <span className="nav-cart-icon" aria-hidden="true">♥</span>
+                <span className="nav-wishlist-text">Wishlist</span>
+                {(wishlistCount || 0) > 0 && (
+                  <span className="nav-cart-badge">{wishlistCount > 99 ? '99+' : wishlistCount}</span>
+                )}
+              </Link>
+            )}
             {isAuthenticated() ? (
               <>
                 {(isVendor || isAdmin) && (
@@ -151,11 +166,6 @@ const Navbar = () => {
                         {isCustomer && (
                           <Link to="/profile" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             Profile
-                          </Link>
-                        )}
-                        {isCustomer && (
-                          <Link to="/wishlist" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
-                            Wishlist
                           </Link>
                         )}
                         {isCustomer && (

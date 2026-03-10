@@ -18,9 +18,13 @@ import {
 } from 'recharts';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { useReviewNotification } from '../context/ReviewNotificationContext';
 import { buildCsv, downloadCsv } from '../utils/csvExport';
 import VendorProductForm from '../components/VendorProductForm';
 import './VendorDashboard.css';
+
+const ORDERS_VIEWED_KEY_ADMIN = 'adminOrdersLastViewedAt';
+const NOTIFICATIONS_VIEWED_KEY_ADMIN = 'adminNotificationsLastViewedAt';
 
 const CATEGORY_LABELS = {
   electronics: 'Electronics',
@@ -100,10 +104,12 @@ const ADMIN_SIDEBAR_NAV = [
   { id: 'reviews', label: 'Reviews & Ratings', icon: '⭐' },
   { id: 'analytics', label: 'Analytics', icon: '📈' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
+  { id: 'export', label: 'Export to CSV', icon: '📥' },
 ];
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const { hasUnseenReviewUpdates, unseenReviewCount, markReviewsViewed } = useReviewNotification();
   const [activeTab, setActiveTab] = useState('overview');
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -152,6 +158,25 @@ const AdminDashboard = () => {
   const [reviewEditError, setReviewEditError] = useState('');
   const [deletingReviewId, setDeletingReviewId] = useState(null);
   const [notificationSort, setNotificationSort] = useState('newest');
+  const [exportOrdersOpen, setExportOrdersOpen] = useState(false);
+  const [exportOrdersSort, setExportOrdersSort] = useState('dateDesc');
+  const [exportOrdersFrom, setExportOrdersFrom] = useState('');
+  const [exportOrdersTo, setExportOrdersTo] = useState('');
+  const [exportingOrders, setExportingOrders] = useState(false);
+  const [ordersLastViewedAt, setOrdersLastViewedAt] = useState(() => {
+    try {
+      return parseInt(localStorage.getItem(ORDERS_VIEWED_KEY_ADMIN) || '0', 10);
+    } catch {
+      return 0;
+    }
+  });
+  const [notificationsLastViewedAt, setNotificationsLastViewedAt] = useState(() => {
+    try {
+      return parseInt(localStorage.getItem(NOTIFICATIONS_VIEWED_KEY_ADMIN) || '0', 10);
+    } catch {
+      return 0;
+    }
+  });
 
   // Debounce search: update query 400ms after user stops typing
   useEffect(() => {
@@ -174,6 +199,11 @@ const AdminDashboard = () => {
     }, 400);
     return () => clearTimeout(t);
   }, [orderSearchInput]);
+
+  // Keep export defaults aligned to current filters
+  useEffect(() => { setExportOrdersSort(orderSort || 'dateDesc'); }, [orderSort]);
+  useEffect(() => { setExportOrdersFrom(orderDateFrom || ''); }, [orderDateFrom]);
+  useEffect(() => { setExportOrdersTo(orderDateTo || ''); }, [orderDateTo]);
 
   const fetchVendors = useCallback(async () => {
     try {
@@ -236,6 +266,43 @@ const AdminDashboard = () => {
       setReviews([]);
     }
   }, []);
+
+  const markOrdersViewed = useCallback(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    const maxUpdated = Math.max(
+      ...orders.map((o) => new Date(o.updatedAt || o.createdAt || 0).getTime())
+    );
+    setOrdersLastViewedAt(maxUpdated);
+    try {
+      localStorage.setItem(ORDERS_VIEWED_KEY_ADMIN, String(maxUpdated));
+    } catch {
+      // ignore
+    }
+  }, [orders]);
+
+  const markNotificationsViewed = useCallback(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    const maxUpdated = Math.max(
+      ...orders.map((o) => new Date(o.updatedAt || o.createdAt || 0).getTime())
+    );
+    setNotificationsLastViewedAt(maxUpdated);
+    try {
+      localStorage.setItem(NOTIFICATIONS_VIEWED_KEY_ADMIN, String(maxUpdated));
+    } catch {
+      // ignore
+    }
+  }, [orders]);
+
+  // Auto-clear review popup/badge when Reviews tab is opened
+  useEffect(() => {
+    if (activeTab === 'reviews') markReviewsViewed();
+  }, [activeTab, markReviewsViewed]);
+
+  // Auto-clear popups when their tab is opened
+  useEffect(() => {
+    if (activeTab === 'orders') markOrdersViewed();
+    if (activeTab === 'notifications') markNotificationsViewed();
+  }, [activeTab, markOrdersViewed, markNotificationsViewed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -346,6 +413,21 @@ const AdminDashboard = () => {
       salesByCategoryData
     };
   }, [products.length, orders]);
+
+  const unseenOrderCount = useMemo(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return 0;
+    if (ordersLastViewedAt <= 0) return orders.length;
+    return orders.filter((o) => new Date(o.updatedAt || o.createdAt || 0).getTime() > ordersLastViewedAt).length;
+  }, [orders, ordersLastViewedAt]);
+
+  const unseenNotificationCount = useMemo(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return 0;
+    if (notificationsLastViewedAt <= 0) return orders.length;
+    return orders.filter((o) => new Date(o.updatedAt || o.createdAt || 0).getTime() > notificationsLastViewedAt).length;
+  }, [orders, notificationsLastViewedAt]);
+
+  const hasUnseenOrderUpdates = unseenOrderCount > 0;
+  const hasUnseenNotificationUpdates = unseenNotificationCount > 0;
 
   const recentOrders = useMemo(() => orders.slice(0, 8), [orders]);
   const displayName = user?.name || user?.email?.split('@')[0] || 'Admin';
@@ -588,6 +670,36 @@ const AdminDashboard = () => {
     }
   };
 
+  const openExportOrders = () => {
+    setExportOrdersSort(orderSort || 'dateDesc');
+    setExportOrdersFrom(orderDateFrom || '');
+    setExportOrdersTo(orderDateTo || '');
+    setExportOrdersOpen(true);
+  };
+
+  const closeExportOrders = () => {
+    setExportOrdersOpen(false);
+    setExportingOrders(false);
+  };
+
+  const handleExportOrders = async (e) => {
+    e.preventDefault();
+    setExportingOrders(true);
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      if (exportOrdersSort) params.set('sort', exportOrdersSort);
+      if (exportOrdersFrom) params.set('from', exportOrdersFrom);
+      if (exportOrdersTo) params.set('to', exportOrdersTo);
+      const res = await axios.get(`/api/orders/admin/all?${params.toString()}`);
+      exportOrdersToCsv(res.data?.data || [], formatPrice);
+      closeExportOrders();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to export orders');
+      setExportingOrders(false);
+    }
+  };
+
   return (
     <div className="vendor-dashboard-page">
       <Navbar />
@@ -604,11 +716,39 @@ const AdminDashboard = () => {
                   key={id}
                   type="button"
                   className={`vendor-sidebar-item ${activeTab === id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(id)}
+                  onClick={() => {
+                    setActiveTab(id);
+                    if (id === 'reviews') markReviewsViewed();
+                    if (id === 'orders') markOrdersViewed();
+                    if (id === 'notifications') markNotificationsViewed();
+                  }}
                 >
                   <span className="vendor-sidebar-icon" aria-hidden>{icon}</span>
-                  <span className="vendor-sidebar-label">{label}</span>
-                  {((id === 'notifications' || id === 'orders') && adminStats.pendingOrders > 0) && (
+                  <span className="vendor-sidebar-label">
+                    {label}
+                    {(id === 'reviews' && hasUnseenReviewUpdates) ? ` (${unseenReviewCount > 99 ? '99+' : unseenReviewCount})` : ''}
+                  </span>
+                  {(id === 'reviews' && hasUnseenReviewUpdates) && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${unseenReviewCount} new review${unseenReviewCount !== 1 ? 's' : ''}`}>
+                      {unseenReviewCount > 99 ? '99+' : unseenReviewCount}
+                    </span>
+                  )}
+                  {(id === 'orders' && hasUnseenOrderUpdates) && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${unseenOrderCount} new order update${unseenOrderCount !== 1 ? 's' : ''}`}>
+                      {unseenOrderCount > 99 ? '99+' : unseenOrderCount}
+                    </span>
+                  )}
+                  {(id === 'notifications' && hasUnseenNotificationUpdates) && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${unseenNotificationCount} new notification${unseenNotificationCount !== 1 ? 's' : ''}`}>
+                      {unseenNotificationCount > 99 ? '99+' : unseenNotificationCount}
+                    </span>
+                  )}
+                  {id === 'orders' && !hasUnseenOrderUpdates && adminStats.pendingOrders > 0 && (
+                    <span className="vendor-sidebar-notification-badge" aria-label={`${adminStats.pendingOrders} pending`}>
+                      {adminStats.pendingOrders > 99 ? '99+' : adminStats.pendingOrders}
+                    </span>
+                  )}
+                  {id === 'notifications' && !hasUnseenNotificationUpdates && adminStats.pendingOrders > 0 && (
                     <span className="vendor-sidebar-notification-badge" aria-label={`${adminStats.pendingOrders} pending`}>
                       {adminStats.pendingOrders > 99 ? '99+' : adminStats.pendingOrders}
                     </span>
@@ -633,6 +773,69 @@ const AdminDashboard = () => {
                 >
                   ×
                 </button>
+              </div>
+            )}
+            {(hasUnseenReviewUpdates && activeTab !== 'reviews') && (
+              <div className="vendor-dashboard-notice" role="status" aria-live="polite">
+                <span>You have {unseenReviewCount} new review{unseenReviewCount !== 1 ? 's' : ''}.</span>
+                <span className="vendor-dashboard-notice-actions">
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-primary"
+                    onClick={() => { setActiveTab('reviews'); markReviewsViewed(); }}
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-secondary"
+                    onClick={() => markReviewsViewed()}
+                  >
+                    Dismiss
+                  </button>
+                </span>
+              </div>
+            )}
+            {(hasUnseenOrderUpdates && activeTab !== 'orders') && (
+              <div className="vendor-dashboard-notice" role="status" aria-live="polite">
+                <span>You have {unseenOrderCount} new order update{unseenOrderCount !== 1 ? 's' : ''}.</span>
+                <span className="vendor-dashboard-notice-actions">
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-primary"
+                    onClick={() => { setActiveTab('orders'); markOrdersViewed(); }}
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-secondary"
+                    onClick={() => markOrdersViewed()}
+                  >
+                    Dismiss
+                  </button>
+                </span>
+              </div>
+            )}
+            {(hasUnseenNotificationUpdates && activeTab !== 'notifications') && (
+              <div className="vendor-dashboard-notice" role="status" aria-live="polite">
+                <span>You have {unseenNotificationCount} new notification{unseenNotificationCount !== 1 ? 's' : ''}.</span>
+                <span className="vendor-dashboard-notice-actions">
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-primary"
+                    onClick={() => { setActiveTab('notifications'); markNotificationsViewed(); }}
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    className="vendor-dashboard-notice-btn vendor-dashboard-notice-btn-secondary"
+                    onClick={() => markNotificationsViewed()}
+                  >
+                    Dismiss
+                  </button>
+                </span>
               </div>
             )}
 
@@ -974,6 +1177,60 @@ const AdminDashboard = () => {
                     ))}
                   </ul>
                 )}
+                <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+              </div>
+            ) : activeTab === 'export' ? (
+              <div className="vendor-export-page">
+                <div className="vendor-content-header">
+                  <h1 className="vendor-dashboard-title">Export Orders to CSV</h1>
+                  <p className="vendor-dashboard-greeting">Download order data with sort and date filters.</p>
+                </div>
+                <div className="vendor-export-card">
+                  <form onSubmit={handleExportOrders} className="vendor-export-form">
+                    <div className="vendor-product-form-group">
+                      <label htmlFor="admin-export-order-sort">Sort</label>
+                      <select
+                        id="admin-export-order-sort"
+                        className="vendor-filter-select"
+                        value={exportOrdersSort}
+                        onChange={(e) => setExportOrdersSort(e.target.value)}
+                      >
+                        <option value="dateDesc">Newest first</option>
+                        <option value="dateAsc">Oldest first</option>
+                        <option value="totalDesc">Total (high → low)</option>
+                        <option value="totalAsc">Total (low → high)</option>
+                        <option value="status">Status (A–Z)</option>
+                      </select>
+                    </div>
+                    <div className="vendor-export-date-row">
+                      <div className="vendor-product-form-group">
+                        <label htmlFor="admin-export-order-from">From</label>
+                        <input
+                          id="admin-export-order-from"
+                          type="date"
+                          className="vendor-filter-date"
+                          value={exportOrdersFrom}
+                          onChange={(e) => setExportOrdersFrom(e.target.value)}
+                        />
+                      </div>
+                      <div className="vendor-product-form-group">
+                        <label htmlFor="admin-export-order-to">To</label>
+                        <input
+                          id="admin-export-order-to"
+                          type="date"
+                          className="vendor-filter-date"
+                          value={exportOrdersTo}
+                          onChange={(e) => setExportOrdersTo(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="vendor-export-actions">
+                      <button type="submit" className="vendor-btn vendor-btn-primary" disabled={exportingOrders}>
+                        {exportingOrders ? 'Exporting…' : 'Export to CSV'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
                 <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : (
@@ -1621,13 +1878,77 @@ const AdminDashboard = () => {
                         <button
                           type="button"
                           className="vendor-export-csv-btn"
-                          onClick={() => exportOrdersToCsv(orders, formatPrice)}
+                          onClick={openExportOrders}
                           disabled={orders.length === 0}
                           aria-label="Export orders to CSV"
                         >
                           Export to CSV
                         </button>
                       </div>
+                      {exportOrdersOpen && (
+                        <div className="vendor-modal-backdrop" onClick={closeExportOrders} role="presentation">
+                          <div
+                            className="vendor-modal"
+                            onClick={(e) => e.stopPropagation()}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="admin-export-orders-title"
+                          >
+                            <div className="vendor-modal-header">
+                              <h2 id="admin-export-orders-title" className="vendor-modal-title">Export orders to CSV</h2>
+                              <button type="button" className="vendor-modal-close" onClick={closeExportOrders} aria-label="Close">×</button>
+                            </div>
+                            <p className="vendor-modal-desc">Choose sort and date range for export.</p>
+                            <form onSubmit={handleExportOrders} style={{ padding: '0 24px 24px' }}>
+                              <div className="vendor-product-form-group" style={{ marginBottom: 12 }}>
+                                <label htmlFor="admin-export-order-sort">Sort</label>
+                                <select
+                                  id="admin-export-order-sort"
+                                  className="vendor-filter-select"
+                                  value={exportOrdersSort}
+                                  onChange={(e) => setExportOrdersSort(e.target.value)}
+                                >
+                                  <option value="dateDesc">Newest first</option>
+                                  <option value="dateAsc">Oldest first</option>
+                                  <option value="totalDesc">Total (high → low)</option>
+                                  <option value="totalAsc">Total (low → high)</option>
+                                  <option value="status">Status (A–Z)</option>
+                                </select>
+                              </div>
+                              <div className="vendor-product-form-row" style={{ marginBottom: 16 }}>
+                                <div className="vendor-product-form-group" style={{ marginBottom: 0 }}>
+                                  <label htmlFor="admin-export-order-from">From</label>
+                                  <input
+                                    id="admin-export-order-from"
+                                    type="date"
+                                    className="vendor-filter-date"
+                                    value={exportOrdersFrom}
+                                    onChange={(e) => setExportOrdersFrom(e.target.value)}
+                                  />
+                                </div>
+                                <div className="vendor-product-form-group" style={{ marginBottom: 0 }}>
+                                  <label htmlFor="admin-export-order-to">To</label>
+                                  <input
+                                    id="admin-export-order-to"
+                                    type="date"
+                                    className="vendor-filter-date"
+                                    value={exportOrdersTo}
+                                    onChange={(e) => setExportOrdersTo(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <div className="vendor-modal-actions" style={{ padding: 0 }}>
+                                <button type="button" className="vendor-btn vendor-btn-secondary" onClick={closeExportOrders} disabled={exportingOrders}>
+                                  Cancel
+                                </button>
+                                <button type="submit" className="vendor-btn vendor-btn-primary" disabled={exportingOrders}>
+                                  {exportingOrders ? 'Exporting…' : 'Export'}
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      )}
                       {orders.length === 0 ? (
                         <p className="vendor-dashboard-overview-text">No orders match your filters.</p>
                       ) : (

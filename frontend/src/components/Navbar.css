@@ -167,6 +167,25 @@
   color: #be123c;
 }
 
+/* Wishlist button includes text, so override the fixed square size */
+.nav-wishlist-link {
+  width: auto;
+  padding: 0 12px;
+  gap: 6px;
+  justify-content: center;
+}
+
+.nav-wishlist-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  margin-left: 6px;
+}
+
+.nav-wishlist-link:hover .nav-wishlist-text {
+  color: #0f172a;
+}
+
 .nav-user {
   font-size: 0.9375rem;
   font-weight: 500;
@@ -376,5 +395,10 @@
   .nav-register-btn {
     padding: 8px 16px;
     font-size: 0.875rem;
+  }
+
+  /* Keep icons compact on mobile */
+  .nav-wishlist-text {
+    display: none;
   }
 }

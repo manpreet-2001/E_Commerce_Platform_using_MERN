@@ -486,9 +486,17 @@
 
 .admin-user-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   align-items: center;
+  white-space: nowrap;
+}
+
+/* Keep Edit/Delete compact inside tables */
+.admin-user-actions .vendor-btn {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  border-radius: 10px;
 }
 
 .vendor-notification-list {
@@ -593,6 +601,54 @@
   border-radius: 10px;
   color: #dc2626;
   margin-bottom: 16px;
+}
+
+.vendor-dashboard-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  color: #1d4ed8;
+  margin-bottom: 16px;
+}
+
+.vendor-dashboard-notice-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.vendor-dashboard-notice-btn {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.vendor-dashboard-notice-btn-primary {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.vendor-dashboard-notice-btn-primary:hover {
+  background: #1e40af;
+}
+
+.vendor-dashboard-notice-btn-secondary {
+  background: transparent;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.vendor-dashboard-notice-btn-secondary:hover {
+  background: rgba(29, 78, 216, 0.08);
 }
 
 .vendor-dashboard-error-dismiss {
@@ -824,6 +880,44 @@
 .vendor-export-csv-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Export to CSV dedicated section */
+.vendor-export-page {
+  padding: 0;
+}
+
+.vendor-export-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 480px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+}
+
+.vendor-export-form .vendor-product-form-group {
+  margin-bottom: 20px;
+}
+
+.vendor-export-form .vendor-product-form-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.vendor-export-date-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.vendor-export-date-row .vendor-product-form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.vendor-export-actions {
+  margin-top: 24px;
 }
 
 .vendor-products-add-btn {
@@ -1268,4 +1362,13 @@
 
 .admin-reviews-table .vendor-btn-sm {
   margin-right: 6px;
+}
+
+/* Actions column: keep Edit/Delete on one line */
+.admin-reviews-table td:last-child {
+  white-space: nowrap;
+}
+
+.admin-reviews-table td:last-child .vendor-btn-sm {
+  display: inline-flex;
 }

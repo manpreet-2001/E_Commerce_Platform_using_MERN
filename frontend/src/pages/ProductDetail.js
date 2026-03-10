@@ -22,7 +22,7 @@ const CATEGORY_LABELS = {
 const ProductDetail = () => {
   const { id } = useParams();
   const { addToCart } = useCart();
-  const { user, isAuthenticated, hasRole } = useAuth();
+  const { isAuthenticated, hasRole } = useAuth();
   const { isInWishlist, addToWishlist, removeFromWishlist, wishlistLoading } = useWishlist();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +37,7 @@ const ProductDetail = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState('');
+  const [reviewFieldErrors, setReviewFieldErrors] = useState({ rating: '', comment: '' });
   const [deletingReviewId, setDeletingReviewId] = useState(null);
   const [wishlistToggling, setWishlistToggling] = useState(false);
 
@@ -84,15 +85,20 @@ const ProductDetail = () => {
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     setReviewError('');
-    if (!reviewRating || reviewRating < 1 || reviewRating > 5) {
-      setReviewError('Please choose a rating (1–5 stars) before submitting.');
-      return;
-    }
+    const ratingErr = !reviewRating || reviewRating < 1 || reviewRating > 5
+      ? 'Rating is required.'
+      : '';
+    const commentErr = !reviewComment.trim()
+      ? 'Comment is required.'
+      : '';
+    setReviewFieldErrors({ rating: ratingErr, comment: commentErr });
+    if (ratingErr || commentErr) return;
     setReviewSubmitting(true);
     try {
       await axios.post(`/api/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment.trim() });
       setReviewRating(0);
       setReviewComment('');
+      setReviewFieldErrors({ rating: '', comment: '' });
       await fetchReviews();
     } catch (err) {
       setReviewError(err.response?.data?.message || 'Failed to submit review.');
@@ -220,6 +226,7 @@ const ProductDetail = () => {
                     <button
                       key={i}
                       type="button"
+                      role="tab"
                       className={`product-detail-thumb-btn ${selectedImageIndex === i ? 'selected' : ''}`}
                       onClick={() => setSelectedImageIndex(i)}
                       aria-label={`View image ${i + 1}`}
@@ -316,23 +323,35 @@ const ProductDetail = () => {
                       <StarRating
                         rating={reviewRating}
                         interactive
-                        onChange={setReviewRating}
+                        onChange={(val) => {
+                          setReviewRating(val);
+                          if (reviewFieldErrors.rating) setReviewFieldErrors((p) => ({ ...p, rating: '' }));
+                        }}
                         ariaLabel="Choose your rating"
                       />
+                      {reviewFieldErrors.rating && <p className="form-field-error" role="alert">{reviewFieldErrors.rating}</p>}
                     </div>
                     <div className="product-detail-review-comment">
-                      <label htmlFor="review-comment">Comment (optional)</label>
+                      <label htmlFor="review-comment">Comment (required)</label>
                       <textarea
                         id="review-comment"
                         value={reviewComment}
-                        onChange={(e) => setReviewComment(e.target.value)}
+                        onChange={(e) => {
+                          setReviewComment(e.target.value);
+                          if (reviewFieldErrors.comment) setReviewFieldErrors((p) => ({ ...p, comment: '' }));
+                        }}
                         placeholder="Share your experience with this product..."
                         rows={3}
                         maxLength={2000}
-                        className="product-detail-review-textarea"
+                        className={`product-detail-review-textarea ${reviewFieldErrors.comment ? 'input-error' : ''}`}
+                        aria-invalid={!!reviewFieldErrors.comment}
+                        aria-describedby={reviewFieldErrors.comment ? 'review-comment-error' : undefined}
                       />
+                      {reviewFieldErrors.comment && (
+                        <p id="review-comment-error" className="form-field-error" role="alert">{reviewFieldErrors.comment}</p>
+                      )}
                     </div>
-                    <button type="submit" className="btn-add-to-cart product-detail-review-submit" disabled={reviewSubmitting || reviewRating < 1}>
+                    <button type="submit" className="btn-add-to-cart product-detail-review-submit" disabled={reviewSubmitting}>
                       {reviewSubmitting ? 'Submitting…' : 'Submit review'}
                     </button>
                   </form>

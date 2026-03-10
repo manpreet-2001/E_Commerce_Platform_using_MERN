@@ -114,7 +114,6 @@ router.post('/register', async (req, res) => {
       role: normalizedRole
     });
 
-    sendNewUserNotifyEmail(user);
     sendWelcomeEmail(user);
 
     // Generate token
