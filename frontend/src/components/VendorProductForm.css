@@ -57,6 +57,12 @@
   cursor: pointer;
 }
 
+.vendor-product-form-file-input.input-error {
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  padding: 8px;
+}
+
 .vendor-product-form-file-input::file-selector-button {
   padding: 8px 14px;
   margin-right: 12px;
@@ -259,6 +265,28 @@
   outline: none;
   border-color: #0f172a;
   box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+}
+
+/* Match Login form error styling: red border on invalid inputs */
+.vendor-product-form-group input.input-error:not(.vendor-product-form-file-input),
+.vendor-product-form-group select.input-error,
+.vendor-product-form-group textarea.input-error {
+  border-color: #dc2626 !important;
+}
+
+.vendor-product-form-group input.input-error:not(.vendor-product-form-file-input):focus,
+.vendor-product-form-group select.input-error:focus,
+.vendor-product-form-group textarea.input-error:focus {
+  outline: none;
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+/* Red error text below fields (same as Login form .form-field-error) */
+.vendor-product-form-group .form-field-error {
+  font-size: 0.8125rem;
+  color: #dc2626;
+  margin-top: 4px;
 }
 
 .vendor-product-form-group textarea {

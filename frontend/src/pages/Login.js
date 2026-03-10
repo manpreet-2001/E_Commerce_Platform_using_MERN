@@ -82,7 +82,7 @@ const Login = () => {
             <p>Access your Store account</p>
           </div>
 
-          {error && <div className="auth-alert auth-alert-error">{error}</div>}
+          {error && <div className="form-error" role="alert">{error}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
@@ -99,7 +99,7 @@ const Login = () => {
                   className={fieldErrors.email ? 'input-error' : ''}
                 />
               </div>
-              {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
+              {fieldErrors.email && <p className="form-field-error">{fieldErrors.email}</p>}
             </div>
 
             <div className="form-group">
@@ -125,7 +125,7 @@ const Login = () => {
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-              {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
+              {fieldErrors.password && <p className="form-field-error">{fieldErrors.password}</p>}
             </div>
 
             <div className="form-options">

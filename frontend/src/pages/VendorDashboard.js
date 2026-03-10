@@ -18,7 +18,6 @@ import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { computeVendorStats } from '../utils/vendorStats';
 import VendorProductForm from '../components/VendorProductForm';
-import { getImageUrl } from '../utils/imageUrl';
 import { getPasswordErrorMessage } from '../utils/passwordStrength';
 import './VendorDashboard.css';
 
@@ -684,42 +683,42 @@ const VendorDashboard = () => {
                       <input
                         id="vendor-current-password"
                         type="password"
-                        className={`vendor-search-input ${passwordFieldErrors.currentPassword ? 'vendor-input-invalid' : ''}`}
+                        className={`vendor-search-input ${passwordFieldErrors.currentPassword ? 'input-error' : ''}`}
                         value={passwordForm.currentPassword}
                         onChange={(e) => { setPasswordForm((p) => ({ ...p, currentPassword: e.target.value })); setPasswordFieldErrors((p) => ({ ...p, currentPassword: '' })); }}
                         placeholder="Enter current password"
                         autoComplete="current-password"
                         disabled={passwordSaving}
                       />
-                      {passwordFieldErrors.currentPassword && <p className="vendor-field-error">{passwordFieldErrors.currentPassword}</p>}
+                      {passwordFieldErrors.currentPassword && <p className="form-field-error">{passwordFieldErrors.currentPassword}</p>}
                     </div>
                     <div className="vendor-product-form-group">
                       <label htmlFor="vendor-new-password">New password</label>
                       <input
                         id="vendor-new-password"
                         type="password"
-                        className={`vendor-search-input ${passwordFieldErrors.newPassword ? 'vendor-input-invalid' : ''}`}
+                        className={`vendor-search-input ${passwordFieldErrors.newPassword ? 'input-error' : ''}`}
                         value={passwordForm.newPassword}
                         onChange={(e) => { setPasswordForm((p) => ({ ...p, newPassword: e.target.value })); setPasswordFieldErrors((p) => ({ ...p, newPassword: '' })); }}
                         placeholder="Enter new password"
                         autoComplete="new-password"
                         disabled={passwordSaving}
                       />
-                      {passwordFieldErrors.newPassword && <p className="vendor-field-error">{passwordFieldErrors.newPassword}</p>}
+                      {passwordFieldErrors.newPassword && <p className="form-field-error">{passwordFieldErrors.newPassword}</p>}
                     </div>
                     <div className="vendor-product-form-group">
                       <label htmlFor="vendor-confirm-password">Confirm new password</label>
                       <input
                         id="vendor-confirm-password"
                         type="password"
-                        className={`vendor-search-input ${passwordFieldErrors.confirmPassword ? 'vendor-input-invalid' : ''}`}
+                        className={`vendor-search-input ${passwordFieldErrors.confirmPassword ? 'input-error' : ''}`}
                         value={passwordForm.confirmPassword}
                         onChange={(e) => { setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value })); setPasswordFieldErrors((p) => ({ ...p, confirmPassword: '' })); }}
                         placeholder="Confirm new password"
                         autoComplete="new-password"
                         disabled={passwordSaving}
                       />
-                      {passwordFieldErrors.confirmPassword && <p className="vendor-field-error">{passwordFieldErrors.confirmPassword}</p>}
+                      {passwordFieldErrors.confirmPassword && <p className="form-field-error">{passwordFieldErrors.confirmPassword}</p>}
                     </div>
                     <button type="submit" className="vendor-btn vendor-btn-primary" disabled={passwordSaving}>
                       {passwordSaving ? 'Updating…' : 'Update password'}

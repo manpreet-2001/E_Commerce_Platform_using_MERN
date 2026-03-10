@@ -27,11 +27,11 @@ function normalizeProductImage(product) {
 }
 
 // @route   GET /api/products
-// @desc    Get all products (optional: category, search, page, limit for pagination)
+// @desc    Get all products (optional: category, search, page, limit, sort for pagination/sorting)
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const { category, search, page, limit } = req.query;
+    const { category, search, page, limit, sort } = req.query;
     const filter = {};
 
     if (category) {
@@ -50,11 +50,15 @@ router.get('/', async (req, res) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 12));
     const skip = (pageNum - 1) * limitNum;
 
+    let sortObj = { createdAt: -1 };
+    if (sort === 'priceAsc') sortObj = { price: 1 };
+    else if (sort === 'priceDesc') sortObj = { price: -1 };
+
     const [total, products] = await Promise.all([
       Product.countDocuments(filter),
       Product.find(filter)
         .populate('vendor', 'name email')
-        .sort({ createdAt: -1 })
+        .sort(sortObj)
         .skip(skip)
         .limit(limitNum)
         .lean()

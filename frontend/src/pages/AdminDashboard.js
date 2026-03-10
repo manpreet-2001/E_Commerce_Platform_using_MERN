@@ -18,7 +18,6 @@ import {
 } from 'recharts';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
-import { getImageUrl } from '../utils/imageUrl';
 import { buildCsv, downloadCsv } from '../utils/csvExport';
 import VendorProductForm from '../components/VendorProductForm';
 import './VendorDashboard.css';
@@ -299,7 +298,6 @@ const AdminDashboard = () => {
     const ordersByDay = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
 
     const productRevenueMap = {};
-    const productQuantityMap = {};
     orders.forEach((o) => {
       if (o.status === 'cancelled') return;
       (o.items || []).forEach((item) => {

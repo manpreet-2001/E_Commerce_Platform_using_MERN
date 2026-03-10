@@ -14,6 +14,7 @@ const Checkout = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { cartItems, cartLoading, cartSubtotal, cartShippingCost, cartTaxAmount, cartTotal, freeShippingThreshold, clearCart, fetchCart } = useCart();
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [placing, setPlacing] = useState(false);
   const [address, setAddress] = useState({
     fullName: '',
@@ -50,11 +51,23 @@ const Checkout = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setAddress((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    setMessage('');
   };
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     setMessage('');
+    const err = {};
+    if (!address.fullName?.trim()) err.fullName = 'Full name is required';
+    if (!address.address?.trim()) err.address = 'Address is required';
+    if (!address.city?.trim()) err.city = 'City is required';
+    if (!address.country?.trim()) err.country = 'Country is required';
+    if (Object.keys(err).length > 0) {
+      setFieldErrors(err);
+      return;
+    }
+    setFieldErrors({});
     setPlacing(true);
     try {
       await axios.post('/api/orders', {
@@ -80,7 +93,7 @@ const Checkout = () => {
           <h1 className="checkout-title">Checkout</h1>
           <Link to="/cart" className="checkout-back">← Back to cart</Link>
 
-          {message && <div className="checkout-error">{message}</div>}
+          {message && <div className="form-error" role="alert">{message}</div>}
 
           <form className="checkout-form" onSubmit={handlePlaceOrder}>
             <section className="checkout-section">
@@ -95,8 +108,9 @@ const Checkout = () => {
                     value={address.fullName}
                     onChange={handleChange}
                     placeholder="First and last name"
-                    required
+                    className={fieldErrors.fullName ? 'input-error' : ''}
                   />
+                  {fieldErrors.fullName && <p className="form-field-error">{fieldErrors.fullName}</p>}
                 </label>
                 <label>
                   <span>Address</span>
@@ -106,8 +120,9 @@ const Checkout = () => {
                     value={address.address}
                     onChange={handleChange}
                     placeholder="Street, building, apartment"
-                    required
+                    className={fieldErrors.address ? 'input-error' : ''}
                   />
+                  {fieldErrors.address && <p className="form-field-error">{fieldErrors.address}</p>}
                 </label>
                 <div className="checkout-row">
                   <label>
@@ -118,8 +133,9 @@ const Checkout = () => {
                       value={address.city}
                       onChange={handleChange}
                       placeholder="City"
-                      required
+                      className={fieldErrors.city ? 'input-error' : ''}
                     />
+                    {fieldErrors.city && <p className="form-field-error">{fieldErrors.city}</p>}
                   </label>
                   <label>
                     <span>State / Province</span>
@@ -150,8 +166,9 @@ const Checkout = () => {
                     value={address.country}
                     onChange={handleChange}
                     placeholder="Country"
-                    required
+                    className={fieldErrors.country ? 'input-error' : ''}
                   />
+                  {fieldErrors.country && <p className="form-field-error">{fieldErrors.country}</p>}
                 </label>
               </div>
             </section>

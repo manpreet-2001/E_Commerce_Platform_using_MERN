@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { useOrderNotification } from '../context/OrderNotificationContext';
 import { getImageUrl } from '../utils/imageUrl';
 import './Orders.css';
@@ -38,19 +39,21 @@ const Orders = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, loading: authLoading, hasRole } = useAuth();
+  const { addToCart } = useCart();
   const { setOrdersViewed } = useOrderNotification();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showOrderSuccess, setShowOrderSuccess] = useState(Boolean(location.state?.orderPlaced));
   const [cancellingId, setCancellingId] = useState(null);
+  const [reorderId, setReorderId] = useState(null);
 
   // Clear location state so back button doesn't re-show the message
   useEffect(() => {
     if (location.state?.orderPlaced) {
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, []);
+  }, [location.pathname, location.state?.orderPlaced, navigate]);
 
   // Auto-hide success message after 5 seconds
   useEffect(() => {
@@ -78,9 +81,31 @@ const Orders = () => {
     };
     fetchOrders();
     return () => { cancelled = true; };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, hasRole, setOrdersViewed]);
 
   const cancellableStatuses = ['pending', 'confirmed'];
+  const reorderableStatuses = ['delivered', 'cancelled'];
+
+  const handleReorder = async (order) => {
+    if (!order?.items?.length) return;
+    setReorderId(order._id);
+    setError('');
+    let failed = false;
+    for (const item of order.items) {
+      const productId = item.product?._id;
+      if (productId && (item.quantity || 0) > 0) {
+        const result = await addToCart(productId, item.quantity || 1);
+        if (!result.success) {
+          setError(result.message || 'Failed to add items to cart');
+          failed = true;
+          break;
+        }
+      }
+    }
+    if (!failed) navigate('/cart');
+    setReorderId(null);
+  };
+
   const handleCancelOrder = async (orderId) => {
     if (!window.confirm('Cancel this order? This cannot be undone.')) return;
     setError('');
@@ -190,16 +215,28 @@ const Orders = () => {
                       <p className="orders-card-meta-value">{PAYMENT_LABELS[order.paymentMethod] || order.paymentMethod || '—'}</p>
                     </div>
                   </div>
-                  {cancellableStatuses.includes(order.status) && (
+                  {(cancellableStatuses.includes(order.status) || reorderableStatuses.includes(order.status)) && (
                     <div className="orders-card-actions">
-                      <button
-                        type="button"
-                        className="orders-cancel-btn"
-                        onClick={() => handleCancelOrder(order._id)}
-                        disabled={cancellingId === order._id}
-                      >
-                        {cancellingId === order._id ? 'Cancelling…' : 'Cancel order'}
-                      </button>
+                      {reorderableStatuses.includes(order.status) && (
+                        <button
+                          type="button"
+                          className="orders-reorder-btn"
+                          onClick={() => handleReorder(order)}
+                          disabled={reorderId === order._id}
+                        >
+                          {reorderId === order._id ? 'Adding to cart…' : 'Reorder'}
+                        </button>
+                      )}
+                      {cancellableStatuses.includes(order.status) && (
+                        <button
+                          type="button"
+                          className="orders-cancel-btn"
+                          onClick={() => handleCancelOrder(order._id)}
+                          disabled={cancellingId === order._id}
+                        >
+                          {cancellingId === order._id ? 'Cancelling…' : 'Cancel order'}
+                        </button>
+                      )}
                     </div>
                   )}
                   {order.status === 'delivered' && (

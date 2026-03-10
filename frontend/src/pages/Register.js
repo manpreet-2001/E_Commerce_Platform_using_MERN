@@ -155,7 +155,7 @@ const Register = () => {
             <p>Join Store community today</p>
           </div>
 
-          {error && <div className="auth-alert auth-alert-error">{error}</div>}
+          {error && <div className="form-error" role="alert">{error}</div>}
 
           {accountCreated ? (
             <div className="auth-success-panel">
@@ -187,7 +187,7 @@ const Register = () => {
                     className={fieldErrors.firstName ? 'input-error' : ''}
                   />
                 </div>
-                {fieldErrors.firstName && <p className="field-error">{fieldErrors.firstName}</p>}
+                {fieldErrors.firstName && <p className="form-field-error">{fieldErrors.firstName}</p>}
               </div>
               <div className="form-group">
                 <label htmlFor="lastName">Last Name</label>
@@ -202,7 +202,7 @@ const Register = () => {
                     className={fieldErrors.lastName ? 'input-error' : ''}
                   />
                 </div>
-                {fieldErrors.lastName && <p className="field-error">{fieldErrors.lastName}</p>}
+                {fieldErrors.lastName && <p className="form-field-error">{fieldErrors.lastName}</p>}
               </div>
             </div>
 
@@ -220,7 +220,7 @@ const Register = () => {
                   className={fieldErrors.email ? 'input-error' : ''}
                 />
               </div>
-              {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
+              {fieldErrors.email && <p className="form-field-error">{fieldErrors.email}</p>}
             </div>
 
             <div className="form-group">
@@ -244,7 +244,7 @@ const Register = () => {
                 />
               </div>
               {(fieldErrors.phone || phoneInvalid) && (
-                <p className="field-error">{fieldErrors.phone || 'Phone number must be exactly 10 digits'}</p>
+                <p className="form-field-error">{fieldErrors.phone || 'Phone number must be exactly 10 digits'}</p>
               )}
             </div>
 
@@ -284,7 +284,7 @@ const Register = () => {
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-              {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
+              {fieldErrors.password && <p className="form-field-error">{fieldErrors.password}</p>}
               <ul className="password-rules" aria-label="Password requirements">
                 {passwordRuleResults.map((r) => (
                   <li key={r.id} className={r.pass ? 'password-rule-pass' : 'password-rule-fail'}>
@@ -319,7 +319,7 @@ const Register = () => {
                 </button>
               </div>
               {(fieldErrors.confirmPassword || confirmMismatch) && (
-                <p className="field-error">{fieldErrors.confirmPassword || 'Passwords do not match'}</p>
+                <p className="form-field-error">{fieldErrors.confirmPassword || 'Passwords do not match'}</p>
               )}
             </div>
 
@@ -334,7 +334,7 @@ const Register = () => {
                 I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
               </span>
             </label>
-            {fieldErrors.agreeTerms && <p className="field-error">{fieldErrors.agreeTerms}</p>}
+            {fieldErrors.agreeTerms && <p className="form-field-error">{fieldErrors.agreeTerms}</p>}
 
             <button
               type="submit"

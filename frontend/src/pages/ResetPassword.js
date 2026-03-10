@@ -91,7 +91,7 @@ const ResetPassword = () => {
         </div>
         <div className="auth-container">
           <div className="auth-card">
-            <div className="auth-alert auth-alert-error">
+            <div className="form-error" role="alert">
               Invalid or missing reset link. Please use the link from your email or{' '}
               <Link to="/forgot-password">request a new password reset</Link>.
             </div>
@@ -114,7 +114,7 @@ const ResetPassword = () => {
         </div>
         <div className="auth-container">
           <div className="auth-card">
-            <div className="auth-alert auth-alert-success">
+            <div className="form-success" role="status">
               Password has been reset. Redirecting to sign in...
             </div>
             <p><Link to="/login">Sign in now</Link></p>
@@ -142,7 +142,7 @@ const ResetPassword = () => {
             <p>Enter a new password below and confirm it. This link is valid for 1 hour.</p>
           </div>
 
-          {error && <div className="auth-alert auth-alert-error">{error}</div>}
+          {error && <div className="form-error" role="alert">{error}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
@@ -169,7 +169,7 @@ const ResetPassword = () => {
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-              {fieldErrors.newPassword && <p className="field-error">{fieldErrors.newPassword}</p>}
+              {fieldErrors.newPassword && <p className="form-field-error">{fieldErrors.newPassword}</p>}
               {newPassword && (
                 <ul className="password-rules">
                   {passwordRuleResults.map((r) => (
@@ -203,8 +203,8 @@ const ResetPassword = () => {
                   {showConfirm ? 'Hide' : 'Show'}
                 </button>
               </div>
-              {fieldErrors.confirmPassword && <p className="field-error">{fieldErrors.confirmPassword}</p>}
-              {confirmMismatch && <p className="field-error">Passwords do not match</p>}
+              {fieldErrors.confirmPassword && <p className="form-field-error">{fieldErrors.confirmPassword}</p>}
+              {confirmMismatch && <p className="form-field-error">Passwords do not match</p>}
             </div>
 
             <button

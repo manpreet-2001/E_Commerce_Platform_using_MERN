@@ -66,8 +66,8 @@ const ForgotPassword = () => {
             <p>Enter your email and we&apos;ll send you a link to reset your password</p>
           </div>
 
-          {error && <div className="auth-alert auth-alert-error">{error}</div>}
-          {message && <div className="auth-alert auth-alert-success">{message}</div>}
+          {error && <div className="form-error" role="alert">{error}</div>}
+          {message && <div className="form-success" role="status">{message}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
@@ -85,7 +85,7 @@ const ForgotPassword = () => {
                   disabled={loading}
                 />
               </div>
-              {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
+              {fieldErrors.email && <p className="form-field-error">{fieldErrors.email}</p>}
             </div>
 
             <button

@@ -29,6 +29,7 @@ const Products = () => {
   const [category, setCategory] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -45,9 +46,15 @@ const Products = () => {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Sync sort from URL (e.g. /products?sort=priceAsc)
+  useEffect(() => {
+    const q = searchParams.get('sort') || '';
+    setSort(q);
+  }, [searchParams]);
+
   useEffect(() => {
     setPage(1);
-  }, [category, search]);
+  }, [category, search, sort]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -57,6 +64,7 @@ const Products = () => {
         const params = { page, limit: LIMIT };
         if (category) params.category = category;
         if (search) params.search = search;
+        if (sort) params.sort = sort;
         const res = await axios.get('/api/products', { params });
         const list = res.data?.data ?? res.data;
         setProducts(Array.isArray(list) ? list : []);
@@ -78,17 +86,24 @@ const Products = () => {
     };
 
     fetchProducts();
-  }, [category, search, page]);
+  }, [category, search, sort, page]);
 
   const getCategoryLabel = (cat) => CATEGORIES.find(c => c.value === cat)?.label || cat;
 
   const handleCategoryChange = (categoryValue) => {
     setPage(1);
-    if (categoryValue) {
-      setSearchParams({ category: categoryValue });
-    } else {
-      setSearchParams({});
-    }
+    const next = {};
+    if (categoryValue) next.category = categoryValue;
+    if (sort) next.sort = sort;
+    setSearchParams(Object.keys(next).length ? next : {});
+  };
+
+  const handleSortChange = (sortValue) => {
+    setPage(1);
+    const next = {};
+    if (category) next.category = category;
+    if (sortValue) next.sort = sortValue;
+    setSearchParams(Object.keys(next).length ? next : {});
   };
 
   return (
@@ -132,6 +147,20 @@ const Products = () => {
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="products-sort-row">
+              <label htmlFor="product-sort" className="filter-label">Sort by:</label>
+              <select
+                id="product-sort"
+                className="products-sort-select"
+                value={sort}
+                onChange={(e) => handleSortChange(e.target.value)}
+                aria-label="Sort products"
+              >
+                <option value="">Newest first</option>
+                <option value="priceAsc">Price: Low to High</option>
+                <option value="priceDesc">Price: High to Low</option>
+              </select>
             </div>
           </div>
 

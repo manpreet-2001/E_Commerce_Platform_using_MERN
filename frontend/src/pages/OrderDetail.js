@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { getImageUrl } from '../utils/imageUrl';
 import './OrderDetail.css';
 
@@ -26,10 +27,12 @@ const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading, user, hasRole } = useAuth();
+  const { addToCart } = useCart();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [reorderLoading, setReorderLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated() || (user && hasRole(['vendor', 'admin']))) return;
@@ -60,6 +63,27 @@ const OrderDetail = () => {
     } finally {
       setCancelling(false);
     }
+  };
+
+  const showReorder = order && ['delivered', 'cancelled'].includes(order.status);
+  const handleReorder = async () => {
+    if (!order?.items?.length) return;
+    setReorderLoading(true);
+    setError('');
+    let failed = false;
+    for (const item of order.items) {
+      const productId = item.product?._id;
+      if (productId && (item.quantity || 0) > 0) {
+        const result = await addToCart(productId, item.quantity || 1);
+        if (!result.success) {
+          setError(result.message || 'Failed to add items to cart');
+          failed = true;
+          break;
+        }
+      }
+    }
+    if (!failed) navigate('/cart');
+    setReorderLoading(false);
   };
 
   if (authLoading) {
@@ -206,16 +230,28 @@ const OrderDetail = () => {
             <p className="order-detail-payment">{PAYMENT_LABELS[order.paymentMethod] || order.paymentMethod || '—'}</p>
           </section>
 
-          {cancellable && (
+          {(cancellable || showReorder) && (
             <div className="order-detail-actions">
-              <button
-                type="button"
-                className="order-detail-cancel-btn"
-                onClick={handleCancel}
-                disabled={cancelling}
-              >
-                {cancelling ? 'Cancelling…' : 'Cancel order'}
-              </button>
+              {showReorder && (
+                <button
+                  type="button"
+                  className="order-detail-reorder-btn"
+                  onClick={handleReorder}
+                  disabled={reorderLoading}
+                >
+                  {reorderLoading ? 'Adding to cart…' : 'Reorder'}
+                </button>
+              )}
+              {cancellable && (
+                <button
+                  type="button"
+                  className="order-detail-cancel-btn"
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                >
+                  {cancelling ? 'Cancelling…' : 'Cancel order'}
+                </button>
+              )}
             </div>
           )}
         </div>

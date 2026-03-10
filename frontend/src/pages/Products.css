@@ -91,6 +91,34 @@
   margin-bottom: 0;
 }
 
+.products-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.products-sort-row .filter-label {
+  margin-bottom: 0;
+}
+
+.products-sort-select {
+  padding: 8px 12px;
+  font-size: 0.9375rem;
+  color: #1e293b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 180px;
+}
+
+.products-sort-select:focus {
+  outline: none;
+  border-color: #1e293b;
+  box-shadow: 0 0 0 2px rgba(30, 41, 59, 0.1);
+}
+
 .filter-pills {
   display: flex;
   flex-wrap: wrap;

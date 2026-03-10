@@ -72,12 +72,15 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
   const [orderedImageItems, setOrderedImageItems] = useState(() => getOrderedItemsFromProduct(product));
   const [filePreviewUrls, setFilePreviewUrls] = useState([]);
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState({ name: '', price: '', stock: '', images: '' });
 
   useEffect(() => {
     const initial = getInitialFormData(product);
     setFormData(initial);
     setOrderedImageItems(getOrderedItemsFromProduct(product));
     setSelectedPreviewIndex(0);
+    setFieldErrors({ name: '', price: '', stock: '', images: '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset when editing a different product (by id)
   }, [product?._id]);
 
   useEffect(() => {
@@ -94,6 +97,7 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) setFieldErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleFileChange = (e) => {
@@ -105,6 +109,7 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
     });
     if (valid.length > 0 && orderedImageItems.length + valid.length <= MAX_IMAGES) {
       setOrderedImageItems((prev) => [...prev, ...valid.map((file) => ({ type: 'new', file }))]);
+      if (fieldErrors.images) setFieldErrors((prev) => ({ ...prev, images: '' }));
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -137,6 +142,24 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const name = (formData.name || '').trim();
+    const priceVal = parseFloat(formData.price);
+    const stockVal = parseInt(formData.stock, 10);
+    const hasImages = orderedImageItems.length > 0;
+
+    const errors = {
+      name: !name ? 'Product name is required.' : name.length < 2 ? 'Name must be at least 2 characters.' : '',
+      price: formData.price === '' || formData.price === null || formData.price === undefined
+        ? 'Price is required.'
+        : isNaN(priceVal) || priceVal < 0 ? 'Please enter a valid price (0 or greater).' : '',
+      stock: formData.stock === '' || formData.stock === null || formData.stock === undefined
+        ? 'Stock is required.'
+        : isNaN(stockVal) || stockVal < 0 ? 'Stock must be 0 or greater.' : '',
+      images: !isEdit && !hasImages ? 'At least one product image is required.' : '',
+    };
+    setFieldErrors(errors);
+    if (errors.name || errors.price || errors.stock || errors.images) return;
+
     const newFiles = orderedImageItems.filter((i) => i.type === 'new').map((i) => i.file);
     let uploadedUrls = [];
 
@@ -194,7 +217,7 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
     if (totalImages > 0 && selectedPreviewIndex >= totalImages) {
       setSelectedPreviewIndex(totalImages - 1);
     }
-  }, [totalImages]);
+  }, [totalImages, selectedPreviewIndex]);
 
   const mainPreview = galleryItems[selectedPreviewIndex];
 
@@ -206,18 +229,22 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
         <h3 id="vendor-product-details-heading" className="vendor-product-form-section-title">Product details</h3>
         <div className="vendor-product-form-group">
           <label htmlFor="vendor-product-name">Name *</label>
-        <input
-          id="vendor-product-name"
-          name="name"
-          type="text"
-          value={formData.name}
-          onChange={handleChange}
-          placeholder="Product name"
-          required
-          minLength={2}
-          maxLength={200}
-        />
-      </div>
+          <input
+            id="vendor-product-name"
+            name="name"
+            type="text"
+            className={fieldErrors.name ? 'input-error' : ''}
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Product name"
+            required
+            minLength={2}
+            maxLength={200}
+            aria-invalid={!!fieldErrors.name}
+            aria-describedby={fieldErrors.name ? 'vendor-product-name-error' : undefined}
+          />
+          {fieldErrors.name && <p id="vendor-product-name-error" className="form-field-error" role="alert">{fieldErrors.name}</p>}
+        </div>
 
       <div className="vendor-product-form-group">
         <label htmlFor="vendor-product-description">Description</label>
@@ -244,11 +271,15 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
             type="number"
             step="0.01"
             min="0"
+            className={fieldErrors.price ? 'input-error' : ''}
             value={formData.price}
             onChange={handleChange}
             placeholder="0.00"
             required
+            aria-invalid={!!fieldErrors.price}
+            aria-describedby={fieldErrors.price ? 'vendor-product-price-error' : undefined}
           />
+          {fieldErrors.price && <p id="vendor-product-price-error" className="form-field-error" role="alert">{fieldErrors.price}</p>}
         </div>
         <div className="vendor-product-form-group">
           <label htmlFor="vendor-product-stock">Stock *</label>
@@ -257,11 +288,15 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
             name="stock"
             type="number"
             min="0"
+            className={fieldErrors.stock ? 'input-error' : ''}
             value={formData.stock}
             onChange={handleChange}
             placeholder="0"
             required
+            aria-invalid={!!fieldErrors.stock}
+            aria-describedby={fieldErrors.stock ? 'vendor-product-stock-error' : undefined}
           />
+          {fieldErrors.stock && <p id="vendor-product-stock-error" className="form-field-error" role="alert">{fieldErrors.stock}</p>}
         </div>
       </div>
         <div className="vendor-product-form-group">
@@ -285,7 +320,7 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
       <section className="vendor-product-form-section" aria-labelledby="vendor-product-image-heading">
         <h3 id="vendor-product-image-heading" className="vendor-product-form-section-title">Product images</h3>
       <div className="vendor-product-form-group">
-        <label htmlFor="vendor-product-image-input">Image files</label>
+        <label htmlFor="vendor-product-image-input">Image files {!isEdit && '*'}</label>
         <p className="vendor-product-form-hint">JPEG, PNG, GIF or WebP. Max {MAX_SIZE_MB}MB per file. Up to {MAX_IMAGES} images. Use ↑ ↓ to reorder; first image is the main product image.</p>
         <input
           id="vendor-product-image-input"
@@ -294,9 +329,12 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
           accept={ACCEPT_IMAGES}
           multiple
           onChange={handleFileChange}
-          className="vendor-product-form-file-input"
+          className={`vendor-product-form-file-input ${fieldErrors.images ? 'input-error' : ''}`}
           aria-label="Choose images"
+          aria-invalid={!!fieldErrors.images}
+          aria-describedby={fieldErrors.images ? 'vendor-product-images-error' : undefined}
         />
+        {fieldErrors.images && <p id="vendor-product-images-error" className="form-field-error" role="alert">{fieldErrors.images}</p>}
         {hasAnyImages && (
           <div className="vendor-product-form-gallery">
             <div className="vendor-product-form-gallery-main">
@@ -316,6 +354,7 @@ const VendorProductForm = ({ product, onSubmit, onCancel, loading, error }) => {
                 >
                   <button
                     type="button"
+                    role="tab"
                     className="vendor-product-form-gallery-thumb-btn"
                     onClick={() => setSelectedPreviewIndex(globalIndex)}
                     aria-label={`View image ${globalIndex + 1}`}

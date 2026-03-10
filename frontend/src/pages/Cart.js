@@ -65,7 +65,7 @@ const Cart = () => {
         <div className="cart-container">
           <h1 className="cart-title">Your Cart</h1>
 
-          {cartError && <div className="cart-error">{cartError}</div>}
+          {cartError && <div className="form-error" role="alert">{cartError}</div>}
           {message && <div className="cart-message">{message}</div>}
 
           {cartLoading ? (

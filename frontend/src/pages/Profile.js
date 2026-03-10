@@ -250,7 +250,7 @@ const Profile = () => {
                     id="profile-name"
                     type="text"
                     name="name"
-                    className={`profile-input ${fieldErrors.name ? 'profile-input-invalid' : ''}`}
+                    className={`profile-input ${fieldErrors.name ? 'input-error' : ''}`}
                     value={form.name}
                     onChange={handleChange}
                     onBlur={handleProfileBlur}
@@ -264,7 +264,7 @@ const Profile = () => {
                     aria-describedby={fieldErrors.name ? 'profile-name-error' : undefined}
                   />
                   {fieldErrors.name && (
-                    <p id="profile-name-error" className="profile-field-error" role="alert">
+                    <p id="profile-name-error" className="form-field-error" role="alert">
                       {fieldErrors.name}
                     </p>
                   )}
@@ -277,7 +277,7 @@ const Profile = () => {
                     id="profile-email"
                     type="email"
                     name="email"
-                    className={`profile-input ${fieldErrors.email ? 'profile-input-invalid' : ''}`}
+                    className={`profile-input ${fieldErrors.email ? 'input-error' : ''}`}
                     value={form.email}
                     onChange={handleChange}
                     onBlur={handleProfileBlur}
@@ -289,7 +289,7 @@ const Profile = () => {
                     aria-describedby={fieldErrors.email ? 'profile-email-error' : undefined}
                   />
                   {fieldErrors.email && (
-                    <p id="profile-email-error" className="profile-field-error" role="alert">
+                    <p id="profile-email-error" className="form-field-error" role="alert">
                       {fieldErrors.email}
                     </p>
                   )}
@@ -351,7 +351,7 @@ const Profile = () => {
                   id="profile-current-password"
                   type="password"
                   name="currentPassword"
-                  className={`profile-input ${passwordFieldErrors.currentPassword ? 'profile-input-invalid' : ''}`}
+                  className={`profile-input ${passwordFieldErrors.currentPassword ? 'input-error' : ''}`}
                   value={passwordForm.currentPassword}
                   onChange={handlePasswordChange}
                   placeholder="Enter current password"
@@ -362,7 +362,7 @@ const Profile = () => {
                   aria-describedby={passwordFieldErrors.currentPassword ? 'profile-current-password-error' : undefined}
                 />
                 {passwordFieldErrors.currentPassword && (
-                  <p id="profile-current-password-error" className="profile-field-error" role="alert">
+                  <p id="profile-current-password-error" className="form-field-error" role="alert">
                     {passwordFieldErrors.currentPassword}
                   </p>
                 )}
@@ -376,7 +376,7 @@ const Profile = () => {
                   id="profile-new-password"
                   type="password"
                   name="newPassword"
-                  className={`profile-input ${passwordFieldErrors.newPassword ? 'profile-input-invalid' : ''}`}
+                  className={`profile-input ${passwordFieldErrors.newPassword ? 'input-error' : ''}`}
                   value={passwordForm.newPassword}
                   onChange={handlePasswordChange}
                   placeholder="Enter new password"
@@ -387,7 +387,7 @@ const Profile = () => {
                   aria-describedby={passwordFieldErrors.newPassword ? 'profile-new-password-error' : undefined}
                 />
                 {passwordFieldErrors.newPassword && (
-                  <p id="profile-new-password-error" className="profile-field-error" role="alert">
+                  <p id="profile-new-password-error" className="form-field-error" role="alert">
                     {passwordFieldErrors.newPassword}
                   </p>
                 )}
@@ -409,7 +409,7 @@ const Profile = () => {
                   id="profile-confirm-password"
                   type="password"
                   name="confirmPassword"
-                  className={`profile-input ${passwordFieldErrors.confirmPassword ? 'profile-input-invalid' : ''}`}
+                  className={`profile-input ${passwordFieldErrors.confirmPassword ? 'input-error' : ''}`}
                   value={passwordForm.confirmPassword}
                   onChange={handlePasswordChange}
                   placeholder="Confirm new password"
@@ -420,7 +420,7 @@ const Profile = () => {
                   aria-describedby={passwordFieldErrors.confirmPassword ? 'profile-confirm-password-error' : undefined}
                 />
                 {passwordFieldErrors.confirmPassword && (
-                  <p id="profile-confirm-password-error" className="profile-field-error" role="alert">
+                  <p id="profile-confirm-password-error" className="form-field-error" role="alert">
                     {passwordFieldErrors.confirmPassword}
                   </p>
                 )}

@@ -267,6 +267,30 @@
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.order-detail-reorder-btn {
+  padding: 10px 18px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #fff;
+  background: #0f172a;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.order-detail-reorder-btn:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.order-detail-reorder-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .order-detail-cancel-btn {
