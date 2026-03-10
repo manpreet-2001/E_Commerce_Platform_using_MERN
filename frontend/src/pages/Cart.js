@@ -12,7 +12,7 @@ const formatPrice = (price) =>
 const Cart = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { cartItems, cartLoading, cartError, cartTotal, updateQuantity, removeFromCart, clearCart } = useCart();
+  const { cartItems, cartLoading, cartError, cartSubtotal, cartShippingCost, cartTaxAmount, cartTotal, freeShippingThreshold, updateQuantity, removeFromCart, clearCart } = useCart();
   const [updatingId, setUpdatingId] = useState(null);
   const [message, setMessage] = useState('');
 
@@ -104,6 +104,25 @@ const Cart = () => {
                 </button>
                 <div className="cart-summary">
                   <span className="cart-summary-label">Subtotal</span>
+                  <span className="cart-summary-value">{formatPrice(cartSubtotal)}</span>
+                </div>
+                <div className="cart-summary">
+                  <span className="cart-summary-label">
+                    Shipping
+                    {cartSubtotal >= freeShippingThreshold ? (
+                      <span className="cart-summary-note"> (Free on orders over ${freeShippingThreshold})</span>
+                    ) : (
+                      <span className="cart-summary-note"> (Add ${(freeShippingThreshold - cartSubtotal).toFixed(2)} for free shipping)</span>
+                    )}
+                  </span>
+                  <span className="cart-summary-value">{formatPrice(cartShippingCost)}</span>
+                </div>
+                <div className="cart-summary">
+                  <span className="cart-summary-label">Tax (13%)</span>
+                  <span className="cart-summary-value">{formatPrice(cartTaxAmount)}</span>
+                </div>
+                <div className="cart-summary cart-summary-total">
+                  <span className="cart-summary-label">Total</span>
                   <span className="cart-summary-total">{formatPrice(cartTotal)}</span>
                 </div>
                 <Link to="/products" className="cart-cta cart-cta-secondary">Continue shopping</Link>

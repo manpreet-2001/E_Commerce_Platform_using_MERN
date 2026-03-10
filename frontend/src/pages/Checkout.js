@@ -12,7 +12,7 @@ const formatPrice = (price) =>
 const Checkout = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { cartItems, cartLoading, cartTotal, clearCart, fetchCart } = useCart();
+  const { cartItems, cartLoading, cartSubtotal, cartShippingCost, cartTaxAmount, cartTotal, freeShippingThreshold, clearCart, fetchCart } = useCart();
   const [message, setMessage] = useState('');
   const [placing, setPlacing] = useState(false);
   const [address, setAddress] = useState({
@@ -190,6 +190,27 @@ const Checkout = () => {
                     </div>
                   );
                 })}
+              </div>
+              <div className="checkout-summary-breakdown">
+                <div className="checkout-summary-row">
+                  <span>Subtotal</span>
+                  <span>{formatPrice(cartSubtotal)}</span>
+                </div>
+                <div className="checkout-summary-row">
+                  <span>
+                    Shipping
+                    {cartSubtotal >= freeShippingThreshold ? (
+                      <span className="checkout-summary-note"> (Free on orders over ${freeShippingThreshold})</span>
+                    ) : (
+                      <span className="checkout-summary-note"> (Add ${(freeShippingThreshold - cartSubtotal).toFixed(2)} for free shipping)</span>
+                    )}
+                  </span>
+                  <span>{formatPrice(cartShippingCost)}</span>
+                </div>
+                <div className="checkout-summary-row">
+                  <span>Tax (13%)</span>
+                  <span>{formatPrice(cartTaxAmount)}</span>
+                </div>
               </div>
               <div className="checkout-total">
                 <span>Total</span>

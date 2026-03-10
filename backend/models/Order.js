@@ -33,6 +33,9 @@ const orderSchema = new mongoose.Schema({
     zip: { type: String, trim: true, default: '' },
     country: { type: String, trim: true, default: '' }
   },
+  subtotal: { type: Number, default: 0 },
+  shippingCost: { type: Number, default: 0 },
+  taxAmount: { type: Number, default: 0 },
   totalAmount: {
     type: Number,
     required: true,

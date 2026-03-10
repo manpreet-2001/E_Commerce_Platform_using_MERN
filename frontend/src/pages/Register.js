@@ -1,15 +1,32 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import { getPasswordRuleResults, isPasswordStrong, getPasswordErrorMessage } from '../utils/passwordStrength';
 import './Auth.css';
 
-const Register = () => {
-  const navigate = useNavigate();
-  const { register } = useAuth();
-  
-  const [formData, setFormData] = useState({
+const REGISTER_DRAFT_KEY = 'register_form_draft';
+
+const getInitialFormData = () => {
+  try {
+    const saved = sessionStorage.getItem(REGISTER_DRAFT_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        firstName: parsed.firstName || '',
+        lastName: parsed.lastName || '',
+        email: parsed.email || '',
+        phone: parsed.phone || '',
+        role: parsed.role || 'customer',
+        password: '',
+        confirmPassword: '',
+        agreeTerms: parsed.agreeTerms || false
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return {
     firstName: '',
     lastName: '',
     email: '',
@@ -18,7 +35,14 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     agreeTerms: false
-  });
+  };
+};
+
+const Register = () => {
+  const navigate = useNavigate();
+  const { register } = useAuth();
+  
+  const [formData, setFormData] = useState(getInitialFormData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(''); // only for API / generic errors
   const [fieldErrors, setFieldErrors] = useState({});
@@ -30,6 +54,19 @@ const Register = () => {
 
   const passwordRuleResults = useMemo(() => getPasswordRuleResults(password), [password]);
   const confirmMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+
+  // Persist form draft when user navigates to Terms/Privacy and back (exclude passwords for security)
+  useEffect(() => {
+    const draft = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      role: formData.role,
+      agreeTerms: formData.agreeTerms
+    };
+    sessionStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify(draft));
+  }, [formData.firstName, formData.lastName, formData.email, formData.phone, formData.role, formData.agreeTerms]);
 
   const getPhoneDigits = (value) => (value || '').replace(/\D/g, '');
   const isPhoneValid = (value) => getPhoneDigits(value).length === 10;
@@ -87,6 +124,7 @@ const Register = () => {
     );
 
     if (result.success) {
+      sessionStorage.removeItem(REGISTER_DRAFT_KEY);
       setAccountCreated(true);
     } else {
       const msg = result.message || '';
@@ -293,7 +331,7 @@ const Register = () => {
                 onChange={handleChange}
               />
               <span>
-                I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>
+                I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
               </span>
             </label>
             {fieldErrors.agreeTerms && <p className="field-error">{fieldErrors.agreeTerms}</p>}

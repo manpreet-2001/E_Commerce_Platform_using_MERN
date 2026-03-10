@@ -6,6 +6,18 @@ const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 const { sendOrderStatusEmail, sendOrderPlacedEmail } = require('../utils/emailService');
 
+const FREE_SHIPPING_THRESHOLD = 50;
+const SHIPPING_FEE = 5.99;
+const TAX_RATE = 0.13;
+
+function calcOrderTotals(subtotal) {
+  const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const taxBase = subtotal + shippingCost;
+  const taxAmount = Math.round(taxBase * TAX_RATE * 100) / 100;
+  const totalAmount = Math.round((subtotal + shippingCost + taxAmount) * 100) / 100;
+  return { subtotal, shippingCost, taxAmount, totalAmount };
+}
+
 // @route   GET /api/orders/vendor/mine
 // @desc    Get orders that contain at least one product from the current vendor. Optional: ?status=, ?search= (customer name/email)
 // @access  Private (vendor, admin)
@@ -158,7 +170,7 @@ router.post('/', protect, async (req, res) => {
     }
 
     const items = [];
-    let totalAmount = 0;
+    let subtotal = 0;
     for (const entry of user.cart) {
       const product = entry.product;
       if (!product) continue;
@@ -170,8 +182,10 @@ router.post('/', protect, async (req, res) => {
         });
       }
       items.push({ product: product._id, quantity: qty, price: product.price });
-      totalAmount += product.price * qty;
+      subtotal += product.price * qty;
     }
+
+    const { shippingCost, taxAmount, totalAmount } = calcOrderTotals(subtotal);
 
     const shippingAddress = req.body.shippingAddress || {};
     const paymentMethod = (req.body.paymentMethod === 'card' ? 'card' : 'cod');
@@ -186,6 +200,9 @@ router.post('/', protect, async (req, res) => {
         zip: shippingAddress.zip || '',
         country: shippingAddress.country || ''
       },
+      subtotal,
+      shippingCost,
+      taxAmount,
       totalAmount,
       status: 'pending',
       paymentMethod

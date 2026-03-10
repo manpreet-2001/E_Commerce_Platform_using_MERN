@@ -169,7 +169,16 @@ const OrderDetail = () => {
                 );
               })}
             </ul>
-            <p className="order-detail-total">Total: {formatPrice(order.totalAmount)}</p>
+            {(order.subtotal != null || order.shippingCost != null || order.taxAmount != null) ? (
+              <div className="order-detail-totals">
+                <p className="order-detail-row"><span>Subtotal</span><span>{formatPrice(order.subtotal)}</span></p>
+                <p className="order-detail-row"><span>Shipping{order.subtotal >= 50 ? ' (Free on orders over $50)' : ''}</span><span>{formatPrice(order.shippingCost)}</span></p>
+                <p className="order-detail-row"><span>Tax</span><span>{formatPrice(order.taxAmount)}</span></p>
+                <p className="order-detail-total">Total: {formatPrice(order.totalAmount)}</p>
+              </div>
+            ) : (
+              <p className="order-detail-total">Total: {formatPrice(order.totalAmount)}</p>
+            )}
             {order.status === 'delivered' && (
               <p className="order-detail-review-note">
                 Your order has been delivered. You can rate and review each product above.

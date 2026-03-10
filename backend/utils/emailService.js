@@ -126,6 +126,9 @@ function sendOrderPlacedEmail(order) {
       <thead><tr style="background: #f1f5f9;"><th style="text-align: left; padding: 8px; border: 1px solid #e2e8f0;">Product</th><th style="text-align: center; padding: 8px; border: 1px solid #e2e8f0;">Qty</th><th style="text-align: right; padding: 8px; border: 1px solid #e2e8f0;">Price</th><th style="text-align: right; padding: 8px; border: 1px solid #e2e8f0;">Total</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    <p>Subtotal: ${formatCurrency(order.subtotal)}</p>
+    <p>Shipping: ${formatCurrency(order.shippingCost)}${(order.subtotal || 0) >= 50 ? ' (Free on orders over $50)' : ''}</p>
+    <p>Tax: ${formatCurrency(order.taxAmount)}</p>
     <p><strong>Order total: ${formatCurrency(order.totalAmount)}</strong></p>
     <p><strong>Payment:</strong> ${paymentLabel}</p>
     <p><strong>Shipping address:</strong><br/>${addressLines}</p>

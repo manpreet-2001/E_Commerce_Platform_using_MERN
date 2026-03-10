@@ -102,19 +102,32 @@ export const CartProvider = ({ children }) => {
   // Total number of items (sum of quantities)
   const cartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
-  // Total price (if product has price)
-  const cartTotal = cartItems.reduce((sum, item) => {
+  // Subtotal (items only)
+  const cartSubtotal = cartItems.reduce((sum, item) => {
     const price = item.product?.price ?? 0;
     const qty = item.quantity || 0;
     return sum + price * qty;
   }, 0);
+
+  // Shipping: free if subtotal >= $50, otherwise $5.99
+  const FREE_SHIPPING_THRESHOLD = 50;
+  const SHIPPING_FEE = 5.99;
+  const TAX_RATE = 0.13;
+  const cartShippingCost = cartSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const cartTaxBase = cartSubtotal + cartShippingCost;
+  const cartTaxAmount = Math.round(cartTaxBase * TAX_RATE * 100) / 100;
+  const cartTotal = Math.round((cartSubtotal + cartShippingCost + cartTaxAmount) * 100) / 100;
 
   const value = {
     cartItems,
     cartLoading,
     cartError,
     cartCount,
+    cartSubtotal,
+    cartShippingCost,
+    cartTaxAmount,
     cartTotal,
+    freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
     fetchCart,
     addToCart,
     removeFromCart,

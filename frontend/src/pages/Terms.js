@@ -56,7 +56,7 @@ const Terms = () => (
         </section>
 
         <p className="about-lead" style={{ marginTop: '2rem' }}>
-          <Link to="/register">Back to registration</Link>
+          <Link to="/register" className="about-back-btn">← Back</Link>
         </p>
       </div>
     </main>

@@ -84,3 +84,24 @@
   background: #1e293b;
   color: #fff;
 }
+
+.about-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.about-back-btn:hover {
+  background: #f8fafc;
+  border-color: #0f172a;
+  color: #0f172a;
+}
