@@ -63,5 +63,12 @@ const productSchema = new mongoose.Schema({
 productSchema.index({ vendor: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ name: 'text', description: 'text' });
+// List/sort performance: common list query sorts
+productSchema.index({ createdAt: -1 });
+productSchema.index({ price: 1 });
+productSchema.index({ price: -1 });
+productSchema.index({ category: 1, createdAt: -1 });
+productSchema.index({ category: 1, price: 1 });
+productSchema.index({ category: 1, price: -1 });
 
 module.exports = mongoose.model('Product', productSchema);

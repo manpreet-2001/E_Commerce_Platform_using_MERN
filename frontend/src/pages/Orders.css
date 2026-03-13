@@ -51,6 +51,11 @@
   color: #64748b;
 }
 
+.orders-loading-brief {
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
 .orders-spinner {
   width: 40px;
   height: 40px;

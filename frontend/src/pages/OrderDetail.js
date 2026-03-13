@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { getImageUrl } from '../utils/imageUrl';
 import './OrderDetail.css';
 
@@ -11,11 +13,20 @@ const formatPrice = (price) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price);
 
 const STATUS_LABELS = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  shipped: 'Shipped',
-  delivered: 'Delivered',
+  pending: 'Order received',
+  confirmed: 'Order confirmed',
+  shipped: 'Order shipped',
+  delivered: 'Order delivered',
   cancelled: 'Cancelled'
+};
+
+/** e.g. "1 Jan 2025, 10:30 AM" for timeline display */
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  const date = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${date}, ${time}`;
 };
 
 const PAYMENT_LABELS = {
@@ -33,6 +44,13 @@ const OrderDetail = () => {
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [reorderLoading, setReorderLoading] = useState(false);
+  const [orderRefreshTrigger, setOrderRefreshTrigger] = useState(0);
+
+  const { socket } = useSocket();
+  const onOrderUpdated = useCallback((payload) => {
+    if (payload?.orderId === id) setOrderRefreshTrigger((t) => t + 1);
+  }, [id]);
+  useSocketEvent(socket, 'order:updated', onOrderUpdated);
 
   useEffect(() => {
     if (!isAuthenticated() || (user && hasRole(['vendor', 'admin']))) return;
@@ -49,7 +67,7 @@ const OrderDetail = () => {
     };
     fetchOrder();
     return () => { cancelled = true; };
-  }, [id, isAuthenticated, user, hasRole]);
+  }, [id, isAuthenticated, user, hasRole, orderRefreshTrigger]);
 
   const handleCancel = async () => {
     if (!window.confirm('Cancel this order? This cannot be undone.')) return;
@@ -82,7 +100,7 @@ const OrderDetail = () => {
         }
       }
     }
-    if (!failed) navigate('/cart');
+    if (!failed) navigate(ROUTES.CART);
     setReorderLoading(false);
   };
 
@@ -96,12 +114,16 @@ const OrderDetail = () => {
   }
 
   if (!isAuthenticated()) {
-    navigate('/login', { replace: true });
+    navigate(ROUTES.LOGIN, { replace: true });
     return null;
   }
 
-  if (user && hasRole(['vendor', 'admin'])) {
-    navigate('/dashboard', { replace: true });
+  if (user && hasRole(['admin'])) {
+    navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+    return null;
+  }
+  if (user && hasRole(['vendor'])) {
+    navigate(ROUTES.VENDOR_DASHBOARD, { replace: true });
     return null;
   }
 
@@ -123,7 +145,7 @@ const OrderDetail = () => {
         <main className="order-detail-main">
           <div className="order-detail-container">
             <div className="order-detail-error">{error}</div>
-            <Link to="/orders" className="order-detail-back">← Back to My Orders</Link>
+            <Link to={ROUTES.ORDERS} className="order-detail-back">← Back to My Orders</Link>
           </div>
         </main>
       </div>
@@ -138,7 +160,7 @@ const OrderDetail = () => {
       <Navbar />
       <main className="order-detail-main">
         <div className="order-detail-container">
-          <Link to="/orders" className="order-detail-back">← Back to My Orders</Link>
+          <Link to={ROUTES.ORDERS} className="order-detail-back">← Back to My Orders</Link>
           {error && <div className="order-detail-error">{error}</div>}
 
           <div className="order-detail-header">
@@ -229,6 +251,29 @@ const OrderDetail = () => {
             <h2 className="order-detail-section-title">Payment</h2>
             <p className="order-detail-payment">{PAYMENT_LABELS[order.paymentMethod] || order.paymentMethod || '—'}</p>
           </section>
+
+          {Array.isArray(order.statusHistory) && order.statusHistory.length > 0 && (
+            <section className="order-detail-section">
+              <h2 className="order-detail-section-title">Status history</h2>
+              <p className="order-detail-status-history-intro">When each status changed:</p>
+              <ul className="order-detail-status-history" aria-label="Order status timeline">
+                {[...order.statusHistory]
+                  .sort((a, b) => new Date(a.changedAt || 0) - new Date(b.changedAt || 0))
+                  .map((entry, idx) => (
+                    <li key={idx} className="order-detail-status-history-item">
+                      <span className="order-detail-status-date">{formatDateTime(entry.changedAt)}</span>
+                      <span className="order-detail-status-sep">—</span>
+                      <span className={`order-detail-status-pill order-detail-status-${entry.status}`}>
+                        {STATUS_LABELS[entry.status] || entry.status}
+                      </span>
+                      {entry.changedBy && (entry.changedBy.name || entry.changedBy.email) && (
+                        <span className="order-detail-status-by"> (by {entry.changedBy.name || entry.changedBy.email})</span>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            </section>
+          )}
 
           {(cancellable || showReorder) && (
             <div className="order-detail-actions">

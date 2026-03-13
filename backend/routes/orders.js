@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 const { sendOrderStatusEmail, sendOrderPlacedEmail } = require('../utils/emailService');
+const { emitOrdersUpdated, emitOrderUpdated } = require('../socket');
 
 const FREE_SHIPPING_THRESHOLD = 50;
 const SHIPPING_FEE = 5.99;
@@ -19,12 +20,12 @@ function calcOrderTotals(subtotal) {
 }
 
 // @route   GET /api/orders/vendor/mine
-// @desc    Get orders that contain at least one product from the current vendor. Optional: ?status=, ?search= (customer name/email)
+// @desc    Get orders that contain at least one product from the current vendor. Optional: ?status=, ?search= (customer), ?sort=, ?category=, ?product= (product name)
 // @access  Private (vendor, admin)
 router.get('/vendor/mine', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {
     const vendorId = req.user._id;
-    const { status, search } = req.query;
+    const { status, search, sort, category, product: productName } = req.query;
 
     const productIds = await getProductIdsByVendor(vendorId);
     const filter = { 'items.product': { $in: productIds } };
@@ -55,19 +56,46 @@ router.get('/vendor/mine', protect, authorize('vendor', 'admin'), async (req, re
       .populate('user', 'name email')
       .populate({
         path: 'items.product',
-        select: 'name price image vendor',
+        select: 'name price image vendor category',
         populate: { path: 'vendor', select: 'name' }
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const filtered = orders.map((order) => {
-      const orderObj = order.toObject();
-      orderObj.items = orderObj.items.filter(
-        (item) => item.product && item.product.vendor && item.product.vendor._id.toString() === vendorId.toString()
+    const vendorIdStr = vendorId.toString();
+    let filtered = orders.map((order) => {
+      const items = (order.items || []).filter(
+        (item) => item.product && item.product.vendor && (item.product.vendor._id || item.product.vendor).toString() === vendorIdStr
       );
-      orderObj.vendorSubtotal = orderObj.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      return orderObj;
+      const vendorSubtotal = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 0), 0);
+      return { ...order, items, vendorSubtotal };
     });
+
+    if (category && typeof category === 'string' && category.trim()) {
+      const cat = category.trim().toLowerCase();
+      const validCategories = ['electronics', 'phones', 'laptops', 'accessories', 'audio', 'gaming', 'other'];
+      if (validCategories.includes(cat)) {
+        filtered = filtered.filter((order) =>
+          (order.items || []).some((item) => item.product && (item.product.category || '').toLowerCase() === cat)
+        );
+      }
+    }
+
+    if (productName && typeof productName === 'string' && productName.trim()) {
+      const term = productName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(term, 'i');
+      filtered = filtered.filter((order) =>
+        (order.items || []).some((item) => item.product && regex.test(item.product.name || ''))
+      );
+    }
+
+    const sortVal = typeof sort === 'string' ? sort.trim().toLowerCase() : '';
+    if (sortVal === 'totalasc' || sortVal === 'total_asc') {
+      filtered.sort((a, b) => (a.vendorSubtotal || 0) - (b.vendorSubtotal || 0));
+    } else if (sortVal === 'totaldesc' || sortVal === 'total_desc') {
+      filtered.sort((a, b) => (b.vendorSubtotal || 0) - (a.vendorSubtotal || 0));
+    }
+    // else keep createdAt order (already from DB)
 
     res.json({ success: true, count: filtered.length, data: filtered });
   } catch (error) {
@@ -205,6 +233,7 @@ router.post('/', protect, async (req, res) => {
       taxAmount,
       totalAmount,
       status: 'pending',
+      statusHistory: [{ status: 'pending', changedAt: new Date() }],
       paymentMethod
     });
 
@@ -225,7 +254,8 @@ router.post('/', protect, async (req, res) => {
       .populate({ path: 'items.product', select: 'name price image vendor' });
 
     sendOrderPlacedEmail(populated);
-
+    emitOrdersUpdated();
+    emitOrderUpdated(order._id.toString());
     res.status(201).json({
       success: true,
       message: 'Order placed successfully',
@@ -244,7 +274,8 @@ router.get('/', protect, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id })
       .populate({ path: 'items.product', select: 'name price image' })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ success: true, count: orders.length, data: orders });
   } catch (error) {
     console.error('GET /api/orders error:', error.message || error);
@@ -259,7 +290,8 @@ router.get('/:id', protect, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('user', 'name email')
-      .populate({ path: 'items.product', select: 'name price image vendor' });
+      .populate({ path: 'items.product', select: 'name price image vendor' })
+      .populate('statusHistory.changedBy', 'name email');
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
@@ -270,7 +302,11 @@ router.get('/:id', protect, async (req, res) => {
     if (!isOwner && !isAdmin && !isVendor) {
       return res.status(403).json({ success: false, message: 'Not authorized to view this order' });
     }
-    res.json({ success: true, data: order });
+    const orderObj = order.toObject ? order.toObject() : order;
+    if (!orderObj.statusHistory || orderObj.statusHistory.length === 0) {
+      orderObj.statusHistory = [{ status: order.status, changedAt: order.updatedAt || order.createdAt }];
+    }
+    res.json({ success: true, data: orderObj });
   } catch (error) {
     console.error('GET /api/orders/:id error:', error.message || error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -306,10 +342,17 @@ router.patch('/:id/cancel', protect, async (req, res) => {
       }))
     );
     order.status = 'cancelled';
+    order.statusHistory = order.statusHistory || [];
+    order.statusHistory.push({ status: 'cancelled', changedAt: new Date(), changedBy: req.user._id });
     await order.save();
     const populated = await Order.findById(order._id)
       .populate('user', 'name email')
-      .populate({ path: 'items.product', select: 'name price image' });
+      .populate({ path: 'items.product', select: 'name price image' })
+      .populate('statusHistory.changedBy', 'name email')
+      .lean();
+    if (!populated.statusHistory || populated.statusHistory.length === 0) {
+      populated.statusHistory = [{ status: 'cancelled', changedAt: populated.updatedAt || populated.createdAt }];
+    }
     sendOrderStatusEmail(populated, 'cancelled');
     res.json({ success: true, message: 'Order cancelled', data: populated });
   } catch (error) {
@@ -344,11 +387,20 @@ router.patch('/:id/status', protect, async (req, res) => {
     }
 
     order.status = status;
+    order.statusHistory = order.statusHistory || [];
+    order.statusHistory.push({ status, changedAt: new Date(), changedBy: req.user._id });
     await order.save();
     const populated = await Order.findById(order._id)
       .populate('user', 'name email')
-      .populate({ path: 'items.product', select: 'name price image vendor' });
+      .populate({ path: 'items.product', select: 'name price image vendor' })
+      .populate('statusHistory.changedBy', 'name email')
+      .lean();
+    if (!populated.statusHistory || populated.statusHistory.length === 0) {
+      populated.statusHistory = [{ status: populated.status, changedAt: populated.updatedAt || populated.createdAt }];
+    }
     sendOrderStatusEmail(populated, status);
+    emitOrdersUpdated();
+    emitOrderUpdated(order._id.toString());
     res.json({ success: true, data: populated });
   } catch (error) {
     console.error('PATCH /api/orders/:id/status error:', error.message || error);

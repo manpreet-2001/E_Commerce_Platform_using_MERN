@@ -1,10 +1,11 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ROUTES } from '../constants/routes';
 
 /**
  * Protects routes that require authentication.
- * Redirects to /login if not logged in (saves intended path in state for redirect after login).
+ * Redirects to login if not logged in (saves intended path in state for redirect after login).
  */
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -19,7 +20,7 @@ const PrivateRoute = ({ children }) => {
   }
 
   if (!isAuthenticated()) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
   }
 
   return children;

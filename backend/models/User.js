@@ -45,6 +45,15 @@ const userSchema = new mongoose.Schema({
       default: 1
     }
   }],
+  savedAddresses: [{
+    fullName: { type: String, trim: true, default: '' },
+    address: { type: String, trim: true, default: '' },
+    city: { type: String, trim: true, default: '' },
+    state: { type: String, trim: true, default: '' },
+    zip: { type: String, trim: true, default: '' },
+    country: { type: String, trim: true, default: '' },
+    label: { type: String, trim: true, default: '' }
+  }],
   resetPasswordToken: { type: String, select: false },
   resetPasswordExpires: { type: Date, select: false }
 }, {

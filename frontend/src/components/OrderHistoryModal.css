@@ -1,0 +1,161 @@
+.order-history-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.order-history-modal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 520px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.order-history-modal-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  position: relative;
+}
+
+.order-history-modal-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.order-history-modal-subtitle {
+  font-size: 0.9375rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.order-history-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 1.5rem;
+  line-height: 1;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.order-history-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.order-history-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.order-history-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.order-history-timeline-item {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 24px;
+  position: relative;
+}
+
+.order-history-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.order-history-timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 20px;
+  bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.order-history-timeline-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.order-history-timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-history-timeline-date {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.order-history-timeline-status-row {
+  margin-bottom: 4px;
+}
+
+.order-history-pill {
+  display: inline-block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.order-history-pill-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.order-history-pill-confirmed {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.order-history-pill-shipped {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.order-history-pill-delivered {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.order-history-pill-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.order-history-timeline-note {
+  font-size: 0.8125rem;
+  color: #64748b;
+}

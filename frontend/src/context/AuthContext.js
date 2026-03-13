@@ -3,6 +3,8 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
+const LOGIN_PATH = '/login';
+
 // Configure axios base URL: env at build time, or production fallback when served from Render frontend
 const apiBase =
   process.env.REACT_APP_API_BASE ||
@@ -23,6 +25,23 @@ axios.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// On 403 "account blocked", clear session and redirect to login so block takes effect immediately
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const message = (error.response?.data?.message || '').toLowerCase();
+    if (status === 403 && message.includes('blocked')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('rememberMe');
+      delete axios.defaults.headers.common['Authorization'];
+      window.location.assign(`${LOGIN_PATH}?blocked=1`);
+      return Promise.reject(error);
+    }
     return Promise.reject(error);
   }
 );
@@ -61,6 +80,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run only when token changes
   }, [token]);
 
   // Re-fetch current user (e.g. after profile update)

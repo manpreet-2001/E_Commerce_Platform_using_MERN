@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import { getPasswordRuleResults, isPasswordStrong, getPasswordErrorMessage } from '../utils/passwordStrength';
 import './Auth.css';
+import './About.css';
 
 const REGISTER_DRAFT_KEY = 'register_form_draft';
 
@@ -49,6 +51,7 @@ const Register = () => {
   const [accountCreated, setAccountCreated] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [policyModal, setPolicyModal] = useState(null); // 'terms' | 'privacy' | null
 
   const { firstName, lastName, email, phone, role, password, confirmPassword, agreeTerms } = formData;
 
@@ -67,6 +70,16 @@ const Register = () => {
     };
     sessionStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify(draft));
   }, [formData.firstName, formData.lastName, formData.email, formData.phone, formData.role, formData.agreeTerms]);
+
+  // Close policy modal on Escape
+  useEffect(() => {
+    if (!policyModal) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setPolicyModal(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [policyModal]);
 
   const getPhoneDigits = (value) => (value || '').replace(/\D/g, '');
   const isPhoneValid = (value) => getPhoneDigits(value).length === 10;
@@ -165,7 +178,7 @@ const Register = () => {
               <button
                 type="button"
                 className="btn-submit"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate(ROUTES.LOGIN)}
               >
                 Continue to Sign In
               </button>
@@ -331,7 +344,10 @@ const Register = () => {
                 onChange={handleChange}
               />
               <span>
-                I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+                I agree to the{' '}
+                <button type="button" className="terms-label-link" onClick={() => setPolicyModal('terms')}>Terms of Service</button>
+                {' '}and{' '}
+                <button type="button" className="terms-label-link" onClick={() => setPolicyModal('privacy')}>Privacy Policy</button>
               </span>
             </label>
             {fieldErrors.agreeTerms && <p className="form-field-error">{fieldErrors.agreeTerms}</p>}
@@ -347,13 +363,99 @@ const Register = () => {
 
           <div className="auth-footer">
             <p>
-              Already have an account? <Link to="/login">Sign In</Link>
+              Already have an account? <Link to={ROUTES.LOGIN}>Sign In</Link>
             </p>
           </div>
           </>
           )}
         </div>
       </div>
+
+      {policyModal && (
+        <div
+          className="auth-policy-modal-backdrop"
+          onClick={() => setPolicyModal(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-policy-modal-title"
+        >
+          <div
+            className="auth-policy-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="auth-policy-modal-header">
+              <h2 id="auth-policy-modal-title" className="auth-policy-modal-title">
+                {policyModal === 'terms' ? 'Terms of Service' : 'Privacy Policy'}
+              </h2>
+              <button
+                type="button"
+                className="auth-policy-modal-close"
+                onClick={() => setPolicyModal(null)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="auth-policy-modal-body">
+              {policyModal === 'terms' && (
+                <div className="about-container auth-policy-modal-inner">
+                  <p className="about-lead">Please read these terms before using CityTech Store.</p>
+                  <section className="about-section">
+                    <h2>Acceptance of terms</h2>
+                    <p>By creating an account, placing an order, or using this website, you agree to these Terms of Service and our Privacy Policy. If you do not agree, please do not use our services.</p>
+                  </section>
+                  <section className="about-section">
+                    <h2>Use of the service</h2>
+                    <p>You may use CityTech Store to browse products, create an account, place orders, and access order history. You must provide accurate information and keep your account secure. You may not use the site for any illegal purpose or to violate any applicable laws.</p>
+                  </section>
+                  <section className="about-section">
+                    <h2>Orders and payment</h2>
+                    <p>Orders are subject to availability and acceptance. We reserve the right to refuse or cancel orders. Payment terms (including Cash on Delivery or card) are as stated at checkout. Prices and promotions may change without notice.</p>
+                  </section>
+                  <section className="about-section">
+                    <h2>Returns and refunds</h2>
+                    <p>Our return and refund policy is described on the Returns page. By placing an order, you agree to that policy. Contact us for any questions about returns.</p>
+                  </section>
+                  <section className="about-section">
+                    <h2>Contact</h2>
+                    <p>For questions about these terms, visit our <Link to={ROUTES.CONTACT}>Contact</Link> page.</p>
+                  </section>
+                </div>
+              )}
+              {policyModal === 'privacy' && (
+                <div className="about-container auth-policy-modal-inner">
+                  <p className="about-lead">How CityTech Store collects, uses, and protects your information.</p>
+                  <section className="about-section">
+                    <h2>Information we collect</h2>
+                    <p>When you register, place an order, or contact us, we may collect your name, email address, shipping address, and payment-related information as needed to process orders and provide customer support.</p>
+                  </section>
+                  <section className="about-section">
+                    <h2>How we use your information</h2>
+                    <p>We use your information to process orders, send order and account-related emails (e.g. order confirmation, status updates), improve our service, and comply with legal obligations. We do not sell your personal information to third parties for marketing.</p>
+                  </section>
+                  <section className="about-section">
+                    <h2>Security</h2>
+                    <p>We take reasonable steps to protect your data, including secure connections and secure storage of account and order information. Passwords are stored in encrypted form.</p>
+                  </section>
+                  <section className="about-section">
+                    <h2>Cookies and usage data</h2>
+                    <p>We may use cookies and similar technologies to keep you signed in and to improve site functionality. You can adjust your browser settings to limit or block cookies.</p>
+                  </section>
+                  <section className="about-section">
+                    <h2>Contact</h2>
+                    <p>For privacy-related questions, visit our <Link to={ROUTES.CONTACT}>Contact</Link> page.</p>
+                  </section>
+                </div>
+              )}
+            </div>
+            <div className="auth-policy-modal-actions">
+              <button type="button" className="auth-policy-modal-cancel" onClick={() => setPolicyModal(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

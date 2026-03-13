@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { ROUTES } from '../constants/routes';
 import {
   BarChart,
   Bar,
@@ -17,8 +18,10 @@ import {
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { useReviewNotification } from '../context/ReviewNotificationContext';
+import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { computeVendorStats } from '../utils/vendorStats';
 import VendorProductForm from '../components/VendorProductForm';
+import OrderHistoryModal from '../components/OrderHistoryModal';
 import { getPasswordErrorMessage } from '../utils/passwordStrength';
 import './VendorDashboard.css';
 
@@ -69,6 +72,9 @@ const VendorDashboard = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [orderHistoryModalOrder, setOrderHistoryModalOrder] = useState(null);
+  const [showLoadingUI, setShowLoadingUI] = useState(false);
+  const LOADING_DELAY_MS = 300;
   const [profileEditing, setProfileEditing] = useState(false);
   const [profileFormName, setProfileFormName] = useState('');
   const [profileFormEmail, setProfileFormEmail] = useState('');
@@ -82,6 +88,10 @@ const VendorDashboard = () => {
   const [vendorOrderStatusFilter, setVendorOrderStatusFilter] = useState('');
   const [vendorOrderSearchInput, setVendorOrderSearchInput] = useState('');
   const [vendorOrderSearchQuery, setVendorOrderSearchQuery] = useState('');
+  const [vendorOrderSort, setVendorOrderSort] = useState('');
+  const [vendorOrderCategoryFilter, setVendorOrderCategoryFilter] = useState('');
+  const [vendorOrderProductInput, setVendorOrderProductInput] = useState('');
+  const [vendorOrderProductQuery, setVendorOrderProductQuery] = useState('');
   const [vendorProductCategoryFilter, setVendorProductCategoryFilter] = useState('');
   const [vendorProductSearchInput, setVendorProductSearchInput] = useState('');
   const [vendorProductSearchQuery, setVendorProductSearchQuery] = useState('');
@@ -108,6 +118,11 @@ const VendorDashboard = () => {
   }, [vendorOrderSearchInput]);
 
   useEffect(() => {
+    const t = setTimeout(() => setVendorOrderProductQuery(vendorOrderProductInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [vendorOrderProductInput]);
+
+  useEffect(() => {
     const t = setTimeout(() => setVendorProductSearchQuery(vendorProductSearchInput.trim()), 400);
     return () => clearTimeout(t);
   }, [vendorProductSearchInput]);
@@ -130,13 +145,16 @@ const VendorDashboard = () => {
       const params = new URLSearchParams();
       if (vendorOrderStatusFilter) params.set('status', vendorOrderStatusFilter);
       if (vendorOrderSearchQuery) params.set('search', vendorOrderSearchQuery);
+      if (vendorOrderSort) params.set('sort', vendorOrderSort);
+      if (vendorOrderCategoryFilter) params.set('category', vendorOrderCategoryFilter);
+      if (vendorOrderProductQuery) params.set('product', vendorOrderProductQuery);
       const res = await axios.get(`/api/orders/vendor/mine?${params.toString()}`);
       setOrders(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load orders');
       setOrders([]);
     }
-  }, [vendorOrderStatusFilter, vendorOrderSearchQuery]);
+  }, [vendorOrderStatusFilter, vendorOrderSearchQuery, vendorOrderSort, vendorOrderCategoryFilter, vendorOrderProductQuery]);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -146,6 +164,19 @@ const VendorDashboard = () => {
       setReviews([]);
     }
   }, []);
+
+  const { socket } = useSocket();
+  useSocketEvent(socket, 'products:updated', fetchProducts);
+  useSocketEvent(socket, 'orders:updated', fetchOrders);
+
+  useEffect(() => {
+    if (!loading) {
+      setShowLoadingUI(false);
+      return;
+    }
+    const t = setTimeout(() => setShowLoadingUI(true), LOADING_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   const markOrdersViewed = useCallback(() => {
     if (!Array.isArray(orders) || orders.length === 0) return;
@@ -172,6 +203,33 @@ const VendorDashboard = () => {
       // ignore
     }
   }, [orders]);
+
+  // On first load when no "last viewed" is set, treat all current orders as already seen (no popup for old data)
+  const hasSetOrdersBaseline = React.useRef(false);
+  const hasSetNotificationsBaseline = React.useRef(false);
+  useEffect(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    if (ordersLastViewedAt <= 0 && !hasSetOrdersBaseline.current) {
+      hasSetOrdersBaseline.current = true;
+      const maxUpdated = Math.max(...orders.map((o) => new Date(o.updatedAt || o.createdAt || 0).getTime()));
+      setOrdersLastViewedAt(maxUpdated);
+      try {
+        localStorage.setItem(ORDERS_VIEWED_KEY_VENDOR, String(maxUpdated));
+      } catch {
+        // ignore
+      }
+    }
+    if (notificationsLastViewedAt <= 0 && !hasSetNotificationsBaseline.current) {
+      hasSetNotificationsBaseline.current = true;
+      const maxUpdated = Math.max(...orders.map((o) => new Date(o.updatedAt || o.createdAt || 0).getTime()));
+      setNotificationsLastViewedAt(maxUpdated);
+      try {
+        localStorage.setItem(NOTIFICATIONS_VIEWED_KEY_VENDOR, String(maxUpdated));
+      } catch {
+        // ignore
+      }
+    }
+  }, [orders, ordersLastViewedAt, notificationsLastViewedAt]);
 
   // Auto-clear review popup/badge when Reviews tab is opened
   useEffect(() => {
@@ -490,8 +548,10 @@ const VendorDashboard = () => {
               </div>
             )}
 
-            {loading ? (
+            {loading && showLoadingUI ? (
               <div className="vendor-dashboard-loading">Loading…</div>
+            ) : loading ? (
+              <div className="vendor-dashboard-loading vendor-dashboard-loading-brief">Loading…</div>
             ) : activeTab === 'overview' ? (
               <div className="vendor-overview-page">
                 <div className="vendor-overview-header">
@@ -500,7 +560,7 @@ const VendorDashboard = () => {
                     <p className="vendor-overview-subtitle">Quick snapshot of your store performance.</p>
                   </div>
                   <div className="vendor-overview-actions">
-                    <Link to="/products" className="vendor-btn vendor-btn-secondary">View Store</Link>
+                    <Link to={ROUTES.PRODUCTS} className="vendor-btn vendor-btn-secondary">View Store</Link>
                     <button type="button" className="vendor-btn vendor-btn-primary" onClick={openAddForm}>
                       Add Product
                     </button>
@@ -700,7 +760,7 @@ const VendorDashboard = () => {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : activeTab === 'reviews' ? (
               <div className="vendor-reviews-page">
@@ -830,7 +890,7 @@ const VendorDashboard = () => {
                         <button type="button" className="vendor-btn vendor-btn-primary" onClick={startProfileEdit}>
                           Edit profile
                         </button>
-                        <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                        <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
                       </div>
                     </>
                   )}
@@ -924,7 +984,7 @@ const VendorDashboard = () => {
                     ))}
                   </ul>
                 )}
-                <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : (
             <>
@@ -1031,7 +1091,7 @@ const VendorDashboard = () => {
                         </table>
                       </div>
                     )}
-                    <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                    <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
                   </div>
                 )}
                 {activeTab === 'orders' && (
@@ -1060,8 +1120,55 @@ const VendorDashboard = () => {
                         onChange={(e) => setVendorOrderSearchInput(e.target.value)}
                         aria-label="Search orders by customer name or email"
                       />
-                      {(vendorOrderSearchInput || vendorOrderStatusFilter) && (
-                        <button type="button" className="vendor-search-clear" onClick={() => { setVendorOrderSearchInput(''); setVendorOrderStatusFilter(''); }}>Clear</button>
+                      <label htmlFor="vendor-order-sort" className="vendor-filter-label">Sort by:</label>
+                      <select
+                        id="vendor-order-sort"
+                        className="vendor-filter-select"
+                        value={vendorOrderSort}
+                        onChange={(e) => setVendorOrderSort(e.target.value)}
+                        aria-label="Sort orders"
+                      >
+                        <option value="">Newest first</option>
+                        <option value="totalAsc">Total: low to high</option>
+                        <option value="totalDesc">Total: high to low</option>
+                      </select>
+                      <label htmlFor="vendor-order-category" className="vendor-filter-label">Category:</label>
+                      <select
+                        id="vendor-order-category"
+                        className="vendor-filter-select"
+                        value={vendorOrderCategoryFilter}
+                        onChange={(e) => setVendorOrderCategoryFilter(e.target.value)}
+                        aria-label="Filter by product category"
+                      >
+                        <option value="">All categories</option>
+                        {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <label htmlFor="vendor-order-product" className="vendor-filter-label">Product name:</label>
+                      <input
+                        id="vendor-order-product"
+                        type="search"
+                        className="vendor-search-input"
+                        placeholder="Product name..."
+                        value={vendorOrderProductInput}
+                        onChange={(e) => setVendorOrderProductInput(e.target.value)}
+                        aria-label="Filter by product name"
+                      />
+                      {(vendorOrderSearchInput || vendorOrderStatusFilter || vendorOrderSort || vendorOrderCategoryFilter || vendorOrderProductInput) && (
+                        <button
+                          type="button"
+                          className="vendor-search-clear"
+                          onClick={() => {
+                            setVendorOrderSearchInput('');
+                            setVendorOrderStatusFilter('');
+                            setVendorOrderSort('');
+                            setVendorOrderCategoryFilter('');
+                            setVendorOrderProductInput('');
+                          }}
+                        >
+                          Clear
+                        </button>
                       )}
                     </div>
                     {orders.length === 0 ? (
@@ -1094,44 +1201,55 @@ const VendorDashboard = () => {
                                     <th>Total</th>
                                     <th>Status</th>
                                     <th>Actions</th>
+                                    <th>History</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {section.orders.map((order) => (
-                                    <tr key={order._id}>
-                                      <td>#{order._id.slice(-6).toUpperCase()}</td>
-                                      <td>
-                                        <span className="vendor-order-table-customer-name">{order.user?.name || '—'}</span>
-                                        <br />
-                                        <span className="vendor-order-table-customer-email">{order.user?.email || '—'}</span>
-                                      </td>
-                                      <td>
-                                        <ul className="vendor-order-table-products">
-                                          {(order.items || []).map((item, idx) => (
-                                            <li key={idx}>{item.product?.name} (×{item.quantity})</li>
-                                          ))}
-                                        </ul>
-                                      </td>
-                                      <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString(undefined, { dateStyle: 'short' }) + ' ' + new Date(order.createdAt).toLocaleTimeString(undefined, { timeStyle: 'short' }) : '—'}</td>
-                                      <td className="vendor-order-table-total">{formatPrice(order.vendorSubtotal || 0)}</td>
-                                      <td>
-                                        <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>{order.status}</span>
-                                      </td>
-                                      <td>
-                                        <select
-                                          className="vendor-order-status-select"
-                                          value={order.status}
-                                          onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
-                                          disabled={updatingOrderId === order._id}
-                                          aria-label={`Change status for order ${order._id.slice(-6)}`}
-                                        >
-                                          {ORDER_STATUSES.map((s) => (
-                                            <option key={s.value} value={s.value}>{s.label}</option>
-                                          ))}
-                                        </select>
-                                        {updatingOrderId === order._id && <span className="vendor-order-updating">…</span>}
-                                      </td>
-                                    </tr>
+                                        <tr key={order._id}>
+                                          <td>#{order._id.slice(-6).toUpperCase()}</td>
+                                          <td>
+                                            <span className="vendor-order-table-customer-name">{order.user?.name || '—'}</span>
+                                            <br />
+                                            <span className="vendor-order-table-customer-email">{order.user?.email || '—'}</span>
+                                          </td>
+                                          <td>
+                                            <ul className="vendor-order-table-products">
+                                              {(order.items || []).map((item, idx) => (
+                                                <li key={idx}>{item.product?.name} (×{item.quantity})</li>
+                                              ))}
+                                            </ul>
+                                          </td>
+                                          <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString(undefined, { dateStyle: 'short' }) + ' ' + new Date(order.createdAt).toLocaleTimeString(undefined, { timeStyle: 'short' }) : '—'}</td>
+                                          <td className="vendor-order-table-total">{formatPrice(order.vendorSubtotal || 0)}</td>
+                                          <td>
+                                            <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>{order.status}</span>
+                                          </td>
+                                          <td>
+                                            <select
+                                              className="vendor-order-status-select"
+                                              value={order.status}
+                                              onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
+                                              disabled={updatingOrderId === order._id}
+                                              aria-label={`Change status for order ${order._id.slice(-6)}`}
+                                            >
+                                              {ORDER_STATUSES.map((s) => (
+                                                <option key={s.value} value={s.value}>{s.label}</option>
+                                              ))}
+                                            </select>
+                                            {updatingOrderId === order._id && <span className="vendor-order-updating">…</span>}
+                                          </td>
+                                          <td>
+                                            <button
+                                              type="button"
+                                              className="vendor-order-history-btn"
+                                              onClick={() => setOrderHistoryModalOrder(order)}
+                                              aria-label={`View history for order ${order._id.slice(-6)}`}
+                                            >
+                                              View history
+                                            </button>
+                                          </td>
+                                        </tr>
                                   ))}
                                 </tbody>
                               </table>
@@ -1140,7 +1258,7 @@ const VendorDashboard = () => {
                         ));
                       })()
                     )}
-                    <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                    <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
                   </div>
                 )}
               </div>
@@ -1192,6 +1310,12 @@ const VendorDashboard = () => {
             />
           </div>
         </div>
+      )}
+      {orderHistoryModalOrder && (
+        <OrderHistoryModal
+          order={orderHistoryModalOrder}
+          onClose={() => setOrderHistoryModalOrder(null)}
+        />
       )}
     </div>
   );

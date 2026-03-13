@@ -2,21 +2,24 @@ import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import './About.css';
 
 const About = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, hasRole } = useAuth();
 
   useEffect(() => {
     if (loading) return;
-    if (user && (user.role === 'vendor' || user.role === 'admin')) {
-      navigate('/dashboard', { replace: true });
+    if (user && hasRole(['admin'])) {
+      navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+    } else if (user && hasRole(['vendor'])) {
+      navigate(ROUTES.VENDOR_DASHBOARD, { replace: true });
     }
-  }, [loading, user, navigate]);
+  }, [loading, user, hasRole, navigate]);
 
-  if (user && (user.role === 'vendor' || user.role === 'admin')) {
+  if (user && (hasRole(['vendor']) || hasRole(['admin']))) {
     return null;
   }
 
@@ -58,7 +61,7 @@ const About = () => {
             </p>
           </section>
 
-          <Link to="/products" className="about-cta">Shop now</Link>
+          <Link to={ROUTES.PRODUCTS} className="about-cta">Shop now</Link>
         </div>
       </main>
       <Footer />

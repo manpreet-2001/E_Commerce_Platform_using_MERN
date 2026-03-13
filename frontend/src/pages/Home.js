@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { ROUTES } from '../constants/routes';
 import './Home.css';
 
 const HERO_SLIDES = [
@@ -11,7 +12,7 @@ const HERO_SLIDES = [
     title: 'Smartphones & accessories',
     subtitle: 'Latest phones and gear. Free shipping on orders over $50.',
     cta: 'Shop Phones',
-    to: '/products?category=phones',
+    to: `${ROUTES.PRODUCTS}?category=phones`,
     theme: 'phones', // for CSS gradient
   },
   {
@@ -20,7 +21,7 @@ const HERO_SLIDES = [
     title: 'Laptops & workstations',
     subtitle: 'Powerful devices for work and play. Quality guaranteed.',
     cta: 'Shop Laptops',
-    to: '/products?category=laptops',
+    to: `${ROUTES.PRODUCTS}?category=laptops`,
     theme: 'laptops',
   },
   {
@@ -29,7 +30,7 @@ const HERO_SLIDES = [
     title: 'Deals on electronics',
     subtitle: 'Save on top brands. Shop the best offers at CityTech.',
     cta: 'View all deals',
-    to: '/products',
+    to: ROUTES.PRODUCTS,
     theme: 'sale',
   },
 ];
@@ -127,7 +128,7 @@ const HomePage = () => {
                 <p className="home-hero-subtitle">{slide.subtitle}</p>
                 <div className="home-hero-buttons">
                   <Link to={slide.to} className="btn-hero btn-hero-primary">{slide.cta}</Link>
-                  <Link to="/products" className="btn-hero btn-hero-secondary">Shop all</Link>
+                  <Link to={ROUTES.PRODUCTS} className="btn-hero btn-hero-secondary">Shop all</Link>
                 </div>
               </div>
             </div>
@@ -198,7 +199,7 @@ const HomePage = () => {
         <div className="home-cta-inner">
           <h2 className="home-cta-title">Ready to explore?</h2>
           <p className="home-cta-text">Browse our full collection of electronics, phones, laptops, and more.</p>
-          <Link to="/products" className="btn-cta">View All Products</Link>
+          <Link to={ROUTES.PRODUCTS} className="btn-cta">View All Products</Link>
         </div>
       </section>
 

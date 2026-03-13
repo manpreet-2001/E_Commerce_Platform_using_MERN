@@ -1,10 +1,13 @@
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 require('dotenv').config();
 
 // Import database connection
 const connectDB = require('./config/db');
+const { initSocket } = require('./socket');
 
 // Warn if JWT_SECRET is missing (registration/login will fail without it)
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
@@ -12,6 +15,12 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
 }
 
 const app = express();
+const server = http.createServer(app);
+initSocket(server);
+
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Middleware – allow frontend origin (browser sends origin without trailing slash; normalize for match)
 const allowedOrigin = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : null;
@@ -31,6 +40,7 @@ const corsOptions = {
   credentials: true
 };
 app.use(cors(corsOptions));
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -54,6 +64,6 @@ app.get('/', (req, res) => {
 connectDB();
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

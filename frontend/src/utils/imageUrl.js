@@ -34,9 +34,6 @@ export const getImageUrl = (imageUrl) => {
 
     const baseUrl = backendUrl.replace(/\/$/, '');
     const fullUrl = baseUrl + pathWithSlash;
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Image URL conversion:', { original: trimmedUrl, fullUrl });
-    }
     return fullUrl;
   }
 

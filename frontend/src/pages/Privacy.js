@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import Footer from '../components/Footer';
 import './About.css';
 
@@ -51,12 +52,12 @@ const Privacy = () => (
         <section className="about-section">
           <h2>Contact</h2>
           <p>
-            For privacy-related questions, visit our <Link to="/contact">Contact</Link> page.
+            For privacy-related questions, visit our <Link to={ROUTES.CONTACT}>Contact</Link> page.
           </p>
         </section>
 
         <p className="about-lead" style={{ marginTop: '2rem' }}>
-          <Link to="/register" className="about-back-btn">← Back</Link>
+          <Link to={ROUTES.REGISTER} className="about-back-btn">← Back</Link>
         </p>
       </div>
     </main>

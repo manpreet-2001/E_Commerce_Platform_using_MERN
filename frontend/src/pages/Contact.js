@@ -1,21 +1,24 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import './Contact.css';
 
 const Contact = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, hasRole } = useAuth();
 
   useEffect(() => {
     if (loading) return;
-    if (user && (user.role === 'vendor' || user.role === 'admin')) {
-      navigate('/dashboard', { replace: true });
+    if (user && hasRole(['admin'])) {
+      navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+    } else if (user && hasRole(['vendor'])) {
+      navigate(ROUTES.VENDOR_DASHBOARD, { replace: true });
     }
-  }, [loading, user, navigate]);
+  }, [loading, user, hasRole, navigate]);
 
-  if (user && (user.role === 'vendor' || user.role === 'admin')) {
+  if (user && (hasRole(['vendor']) || hasRole(['admin']))) {
     return null;
   }
 
@@ -49,11 +52,11 @@ const Contact = () => {
           <section className="contact-section">
             <h2>Quick links</h2>
             <p>
-              <Link to="/products">Shop products</Link> · <Link to="/about">About us</Link>
+              <Link to={ROUTES.PRODUCTS}>Shop products</Link> · <Link to={ROUTES.ABOUT}>About us</Link>
             </p>
           </section>
 
-          <Link to="/products" className="contact-cta">Continue shopping</Link>
+          <Link to={ROUTES.PRODUCTS} className="contact-cta">Continue shopping</Link>
         </div>
       </main>
     </div>

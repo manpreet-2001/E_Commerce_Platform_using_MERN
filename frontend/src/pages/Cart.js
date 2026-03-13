@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
@@ -26,7 +27,7 @@ const Cart = () => {
   }
 
   if (!isAuthenticated()) {
-    navigate('/login', { replace: true });
+    navigate(ROUTES.LOGIN, { replace: true });
     return null;
   }
 
@@ -54,7 +55,7 @@ const Cart = () => {
   };
 
   const handleProceedToCheckout = () => {
-    navigate('/checkout');
+    navigate(ROUTES.CHECKOUT);
   };
 
   return (
@@ -78,7 +79,7 @@ const Cart = () => {
               <div className="cart-empty-icon">🛒</div>
               <h2>Your cart is empty</h2>
               <p>Add items from the shop to get started.</p>
-              <Link to="/products" className="cart-cta">Continue shopping</Link>
+              <Link to={ROUTES.PRODUCTS} className="cart-cta">Continue shopping</Link>
             </div>
           ) : (
             <>
@@ -112,7 +113,7 @@ const Cart = () => {
                     {cartSubtotal >= freeShippingThreshold ? (
                       <span className="cart-summary-note"> (Free on orders over ${freeShippingThreshold})</span>
                     ) : (
-                      <span className="cart-summary-note"> (Add ${(freeShippingThreshold - cartSubtotal).toFixed(2)} for free shipping)</span>
+                      <span className="cart-summary-note"> (Add ${(freeShippingThreshold - cartSubtotal).toFixed(2)} more to your order to get free shipping)</span>
                     )}
                   </span>
                   <span className="cart-summary-value">{formatPrice(cartShippingCost)}</span>
@@ -125,7 +126,7 @@ const Cart = () => {
                   <span className="cart-summary-label">Total</span>
                   <span className="cart-summary-total">{formatPrice(cartTotal)}</span>
                 </div>
-                <Link to="/products" className="cart-cta cart-cta-secondary">Continue shopping</Link>
+                <Link to={ROUTES.PRODUCTS} className="cart-cta cart-cta-secondary">Continue shopping</Link>
                 <button
                   type="button"
                   className="cart-cta cart-cta-primary"

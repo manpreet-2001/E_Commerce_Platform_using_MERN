@@ -1,0 +1,60 @@
+/* Admin login page - uses same Navbar as home; hero and card below */
+.admin-login-page {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.admin-login-hero {
+  padding: 24px 16px 32px;
+  background: #0f172a;
+}
+
+.admin-login-hero h1 {
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.admin-login-hero p {
+  color: #e2e8f0;
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.admin-login-card {
+  border-top: 3px solid #1e293b;
+}
+
+.admin-login-footer {
+  border-top: 1px solid #e5e5e5;
+  margin-top: 24px;
+  padding-top: 24px;
+}
+
+.admin-login-back {
+  font-weight: 500;
+  color: #475569;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.admin-login-back:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}
+
+.admin-login-home {
+  margin-top: 8px;
+  font-size: 0.875rem;
+}
+
+.admin-login-home a {
+  color: #64748b;
+  text-decoration: none;
+}
+
+.admin-login-home a:hover {
+  text-decoration: underline;
+  color: #0f172a;
+}

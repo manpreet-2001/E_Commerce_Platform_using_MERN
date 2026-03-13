@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
 import './Logo.css';
 
 /**
@@ -31,7 +32,7 @@ const Logo = ({ asLink = true, size = 'medium', variant = 'dark', className = ''
 
   if (asLink) {
     return (
-      <Link to="/" className={classNames} aria-label="CityTech - Home">
+      <Link to={ROUTES.HOME} className={classNames} aria-label="CityTech - Home">
         {content}
       </Link>
     );

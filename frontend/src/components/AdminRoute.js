@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ROUTES } from '../constants/routes';
 import PrivateRoute from './PrivateRoute';
 
 /**
@@ -11,7 +12,7 @@ const AdminRoute = ({ children }) => {
 
   return (
     <PrivateRoute>
-      {hasRole(['admin']) ? children : <Navigate to="/" replace />}
+      {hasRole(['admin']) ? children : <Navigate to={ROUTES.HOME} replace />}
     </PrivateRoute>
   );
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import Footer from '../components/Footer';
 import './About.css';
 
@@ -56,7 +57,7 @@ const Terms = () => (
         </section>
 
         <p className="about-lead" style={{ marginTop: '2rem' }}>
-          <Link to="/register" className="about-back-btn">← Back</Link>
+          <Link to={ROUTES.REGISTER} className="about-back-btn">← Back</Link>
         </p>
       </div>
     </main>

@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import StarRating from '../components/StarRating';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { getImageUrl } from '../utils/imageUrl';
 import './Products.css';
 
@@ -40,6 +42,13 @@ const ProductDetail = () => {
   const [reviewFieldErrors, setReviewFieldErrors] = useState({ rating: '', comment: '' });
   const [deletingReviewId, setDeletingReviewId] = useState(null);
   const [wishlistToggling, setWishlistToggling] = useState(false);
+  const [productRefreshTrigger, setProductRefreshTrigger] = useState(0);
+
+  const { socket } = useSocket();
+  const onProductUpdated = useCallback((payload) => {
+    if (payload?.productId === id) setProductRefreshTrigger((t) => t + 1);
+  }, [id]);
+  useSocketEvent(socket, 'product:updated', onProductUpdated);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -57,7 +66,7 @@ const ProductDetail = () => {
     };
 
     if (id) fetchProduct();
-  }, [id]);
+  }, [id, productRefreshTrigger]);
 
   const fetchReviews = useCallback(async () => {
     if (!id) return;
@@ -168,7 +177,7 @@ const ProductDetail = () => {
         <div className="products-main">
           <div className="products-error">
             <p>{error || 'Product not found'}</p>
-            <Link to="/products" className="detail-back">← Back to products</Link>
+            <Link to={ROUTES.PRODUCTS} className="detail-back">← Back to products</Link>
           </div>
         </div>
       </div>
@@ -194,11 +203,11 @@ const ProductDetail = () => {
         <div className="products-container">
           {/* Breadcrumb */}
           <nav className="detail-breadcrumb" aria-label="Breadcrumb">
-            <Link to="/products">Products</Link>
+            <Link to={ROUTES.PRODUCTS}>Products</Link>
             <span className="breadcrumb-sep">/</span>
             <span className="breadcrumb-current">{product.name}</span>
           </nav>
-          <Link to="/products" className="detail-back">← Back to products</Link>
+          <Link to={ROUTES.PRODUCTS} className="detail-back">← Back to products</Link>
 
           <div className="product-detail">
             <div className="product-detail-gallery">
@@ -357,7 +366,7 @@ const ProductDetail = () => {
                   </form>
                 ) : (
                   <p className="product-detail-review-login">
-                    <Link to="/login">Sign in</Link> to leave a review.
+                    <Link to={ROUTES.LOGIN}>Sign in</Link> to leave a review.
                   </p>
                 )}
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { ROUTES } from '../constants/routes';
 import Navbar from '../components/Navbar';
 import './Auth.css';
 
@@ -99,7 +100,7 @@ const ForgotPassword = () => {
 
           <div className="auth-footer">
             <p>
-              Remember your password? <Link to="/login">Sign In</Link>
+              Remember your password? <Link to={ROUTES.LOGIN}>Sign In</Link>
             </p>
           </div>
         </div>

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useOrderNotification } from '../context/OrderNotificationContext';
+import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { getImageUrl } from '../utils/imageUrl';
 import './Orders.css';
 
@@ -47,6 +49,24 @@ const Orders = () => {
   const [showOrderSuccess, setShowOrderSuccess] = useState(Boolean(location.state?.orderPlaced));
   const [cancellingId, setCancellingId] = useState(null);
   const [reorderId, setReorderId] = useState(null);
+  const [ordersRefreshTrigger, setOrdersRefreshTrigger] = useState(0);
+  const [showLoadingUI, setShowLoadingUI] = useState(false);
+
+  const LOADING_DELAY_MS = 280;
+
+  useEffect(() => {
+    if (!loading) {
+      setShowLoadingUI(false);
+      return;
+    }
+    if (orders.length > 0) return;
+    const t = setTimeout(() => setShowLoadingUI(true), LOADING_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [loading, orders.length]);
+
+  const { socket } = useSocket();
+  const onOrdersUpdated = useCallback(() => setOrdersRefreshTrigger((t) => t + 1), []);
+  useSocketEvent(socket, 'orders:updated', onOrdersUpdated);
 
   // Clear location state so back button doesn't re-show the message
   useEffect(() => {
@@ -81,7 +101,7 @@ const Orders = () => {
     };
     fetchOrders();
     return () => { cancelled = true; };
-  }, [isAuthenticated, user, hasRole, setOrdersViewed]);
+  }, [isAuthenticated, user, hasRole, setOrdersViewed, ordersRefreshTrigger]);
 
   const cancellableStatuses = ['pending', 'confirmed'];
   const reorderableStatuses = ['delivered', 'cancelled'];
@@ -102,7 +122,7 @@ const Orders = () => {
         }
       }
     }
-    if (!failed) navigate('/cart');
+    if (!failed) navigate(ROUTES.CART);
     setReorderId(null);
   };
 
@@ -132,12 +152,16 @@ const Orders = () => {
   }
 
   if (!isAuthenticated()) {
-    navigate('/login', { replace: true });
+    navigate(ROUTES.LOGIN, { replace: true });
     return null;
   }
 
-  if (user && hasRole(['vendor', 'admin'])) {
-    navigate('/dashboard', { replace: true });
+  if (user && hasRole(['admin'])) {
+    navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+    return null;
+  }
+  if (user && hasRole(['vendor'])) {
+    navigate(ROUTES.VENDOR_DASHBOARD, { replace: true });
     return null;
   }
 
@@ -153,15 +177,34 @@ const Orders = () => {
             </div>
           )}
           {error && <div className="orders-error">{error}</div>}
-          {loading ? (
-            <div className="orders-loading"><div className="orders-spinner" /><p>Loading orders…</p></div>
+          {loading && orders.length === 0 ? (
+            <div className="orders-loading">
+              {showLoadingUI ? (
+                <>
+                  <div className="orders-spinner" /><p>Loading orders…</p>
+                </>
+              ) : (
+                <p className="orders-loading-brief">Loading…</p>
+              )}
+            </div>
           ) : orders.length === 0 ? (
             <div className="orders-empty">
               <p>You have no orders yet.</p>
-              <Link to="/products" className="orders-cta">Browse products</Link>
+              <Link to={ROUTES.PRODUCTS} className="orders-cta">Browse products</Link>
             </div>
           ) : (
-            <ul className="orders-list">
+            <div style={{ position: 'relative' }}>
+              {loading && orders.length > 0 && (
+                <div
+                  style={{
+                    position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, borderRadius: 8,
+                  }}
+                  aria-hidden
+                >
+                  <div className="orders-spinner" />
+                </div>
+              )}
+              <ul className="orders-list">
               {orders.map((order) => (
                 <li key={order._id} className="orders-card">
                   <div className="orders-card-header">
@@ -247,6 +290,7 @@ const Orders = () => {
                 </li>
               ))}
             </ul>
+            </div>
           )}
         </div>
       </main>

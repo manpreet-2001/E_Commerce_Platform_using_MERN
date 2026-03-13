@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { ROUTES } from '../constants/routes';
 import Navbar from '../components/Navbar';
 import { getPasswordRuleResults, isPasswordStrong, getPasswordErrorMessage } from '../utils/passwordStrength';
 import './Auth.css';
@@ -70,7 +71,7 @@ const ResetPassword = () => {
       });
       if (res.data?.success) {
         setSuccess(true);
-        setTimeout(() => navigate('/login', { replace: true }), 3000);
+        setTimeout(() => navigate(ROUTES.LOGIN, { replace: true }), 3000);
       } else {
         setError(res.data?.message || 'Something went wrong. Please try again.');
       }
@@ -96,7 +97,7 @@ const ResetPassword = () => {
               <Link to="/forgot-password">request a new password reset</Link>.
             </div>
             <div className="auth-footer">
-              <p><Link to="/login">Back to Sign In</Link></p>
+              <p><Link to={ROUTES.LOGIN}>Back to Sign In</Link></p>
             </div>
           </div>
         </div>
@@ -117,7 +118,7 @@ const ResetPassword = () => {
             <div className="form-success" role="status">
               Password has been reset. Redirecting to sign in...
             </div>
-            <p><Link to="/login">Sign in now</Link></p>
+            <p><Link to={ROUTES.LOGIN}>Sign in now</Link></p>
           </div>
         </div>
       </div>
@@ -217,7 +218,7 @@ const ResetPassword = () => {
           </form>
 
           <div className="auth-footer">
-            <p><Link to="/login">Back to Sign In</Link></p>
+            <p><Link to={ROUTES.LOGIN}>Back to Sign In</Link></p>
           </div>
         </div>
       </div>

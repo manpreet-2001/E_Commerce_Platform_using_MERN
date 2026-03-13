@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
+const { emitProductsUpdated, emitProductUpdated } = require('../socket');
 const reviewsRouter = require('./reviews');
 
 router.use('/:productId/reviews', reviewsRouter);
@@ -54,15 +55,24 @@ router.get('/', async (req, res) => {
     if (sort === 'priceAsc') sortObj = { price: 1 };
     else if (sort === 'priceDesc') sortObj = { price: -1 };
 
-    const [total, products] = await Promise.all([
-      Product.countDocuments(filter),
-      Product.find(filter)
-        .populate('vendor', 'name email')
-        .sort(sortObj)
-        .skip(skip)
-        .limit(limitNum)
-        .lean()
-    ]);
+    const hasFilter = Object.keys(filter).length > 0;
+    const countPromise = hasFilter
+      ? Product.countDocuments(filter)
+      : Product.estimatedDocumentCount();
+
+    const query = Product.find(filter)
+      .select('name description price category image images stock averageRating reviewCount createdAt')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    if (sort === 'priceAsc') query.hint(category ? { category: 1, price: 1 } : { price: 1 });
+    else if (sort === 'priceDesc') query.hint(category ? { category: 1, price: -1 } : { price: -1 });
+    else if (category) query.hint({ category: 1, createdAt: -1 });
+    else query.hint({ createdAt: -1 });
+
+    const [total, products] = await Promise.all([countPromise, query.exec()]);
 
     const totalPages = Math.ceil(total / limitNum);
     const data = products.map((p) => normalizeProductImage(p));
@@ -111,15 +121,17 @@ router.get('/admin/all', protect, authorize('admin'), async (req, res) => {
       ];
     }
 
-    const [total, products] = await Promise.all([
-      Product.countDocuments(filter),
-      Product.find(filter)
-        .populate('vendor', 'name email')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limitNum)
-        .lean()
-    ]);
+    const hasFilter = Object.keys(filter).length > 0;
+    const countPromise = hasFilter ? Product.countDocuments(filter) : Product.estimatedDocumentCount();
+    const query = Product.find(filter)
+      .populate('vendor', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+    if (!hasFilter) query.hint({ createdAt: -1 });
+
+    const [total, products] = await Promise.all([countPromise, query.exec()]);
 
     const totalPages = Math.ceil(total / limitNum);
     const data = products.map((p) => normalizeProductImage(p));
@@ -252,6 +264,8 @@ router.post('/', protect, authorize('vendor', 'admin'), async (req, res) => {
     const populated = await Product.findById(product._id)
       .populate('vendor', 'name email');
 
+    emitProductsUpdated();
+    emitProductUpdated(product._id.toString());
     res.status(201).json({
       success: true,
       message: 'Product created successfully',
@@ -320,6 +334,8 @@ router.put('/:id', protect, async (req, res) => {
       { new: true, runValidators: true }
     ).populate('vendor', 'name email');
 
+    emitProductsUpdated();
+    emitProductUpdated(req.params.id);
     res.json({
       success: true,
       message: 'Product updated successfully',
@@ -368,7 +384,8 @@ router.delete('/:id', protect, async (req, res) => {
     }
 
     await Product.findByIdAndDelete(req.params.id);
-
+    emitProductsUpdated();
+    emitProductUpdated(req.params.id);
     res.json({
       success: true,
       message: 'Product deleted successfully'

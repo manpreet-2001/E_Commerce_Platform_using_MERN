@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useOrderNotification } from '../context/OrderNotificationContext';
+import { ROUTES } from '../constants/routes';
 import Logo from './Logo';
 import './Navbar.css';
 
@@ -19,12 +20,24 @@ const Navbar = () => {
   const isCustomer = isAuthenticated() && !isVendor && !isAdmin;
   const showHamburger = isAuthenticated();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const userMenuRef = useRef(null);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const q = (searchQuery || '').trim();
+    if (q) {
+      navigate(`${ROUTES.PRODUCTS}?search=${encodeURIComponent(q)}`);
+      setSearchQuery('');
+    } else {
+      navigate(ROUTES.PRODUCTS);
+    }
+  };
 
   const handleLogout = () => {
     setUserMenuOpen(false);
     logout();
-    navigate('/');
+    navigate(ROUTES.HOME);
   };
 
   useEffect(() => {
@@ -53,24 +66,24 @@ const Navbar = () => {
           {/* Main nav: no Profile link — customers use hamburger menu, vendors use Dashboard → Vendor Profile */}
           <ul className="nav-menu">
             <li className="nav-item">
-              <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
+              <Link to={ROUTES.HOME} className={`nav-link ${location.pathname === ROUTES.HOME ? 'active' : ''}`}>
                 Home
               </Link>
             </li>
             <li className="nav-item">
-              <Link to="/products" className={`nav-link ${location.pathname === '/products' ? 'active' : ''}`}>
+              <Link to={ROUTES.PRODUCTS} className={`nav-link ${location.pathname.startsWith(ROUTES.PRODUCTS) ? 'active' : ''}`}>
                 Shop
               </Link>
             </li>
             {!isVendor && !isAdmin && (
               <>
                 <li className="nav-item">
-                  <Link to="/about" className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}>
+                  <Link to={ROUTES.ABOUT} className={`nav-link ${location.pathname === ROUTES.ABOUT ? 'active' : ''}`}>
                     About
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <Link to="/contact" className={`nav-link ${location.pathname === '/contact' ? 'active' : ''}`}>
+                  <Link to={ROUTES.CONTACT} className={`nav-link ${location.pathname === ROUTES.CONTACT ? 'active' : ''}`}>
                     Contact
                   </Link>
                 </li>
@@ -78,21 +91,21 @@ const Navbar = () => {
             )}
             {isVendor && (
               <li className="nav-item">
-                <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
+                <Link to={ROUTES.VENDOR_DASHBOARD} className={`nav-link ${location.pathname === ROUTES.VENDOR_DASHBOARD ? 'active' : ''}`}>
                   Dashboard
                 </Link>
               </li>
             )}
             {isAdmin && (
               <li className="nav-item">
-                <Link to="/admin" className={`nav-link ${location.pathname === '/admin' ? 'active' : ''}`}>
+                <Link to={ROUTES.ADMIN_DASHBOARD} className={`nav-link ${location.pathname === ROUTES.ADMIN_DASHBOARD ? 'active' : ''}`}>
                   Dashboard
                 </Link>
               </li>
             )}
             {isCustomer && (
               <li className="nav-item">
-                <Link to="/orders" className={`nav-link nav-link-orders ${location.pathname === '/orders' ? 'active' : ''}`}>
+                <Link to={ROUTES.ORDERS} className={`nav-link nav-link-orders ${location.pathname.startsWith(ROUTES.ORDERS) ? 'active' : ''}`}>
                   My Orders
                   {hasUnseenOrderUpdates && (
                     <span className="nav-orders-dot" aria-label="Order status updated" title="Order status updated" />
@@ -102,9 +115,30 @@ const Navbar = () => {
             )}
           </ul>
 
+          <form className="nav-search-form" onSubmit={handleSearchSubmit} role="search">
+            <label htmlFor="nav-search-input" className="nav-search-label">Search</label>
+            <div className="nav-search-wrap">
+              <input
+                id="nav-search-input"
+                type="search"
+                className="nav-search-input"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search products"
+              />
+              <button type="submit" className="nav-search-btn" aria-label="Search">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </button>
+            </div>
+          </form>
+
           <div className="nav-actions">
             {isAuthenticated() && (
-              <Link to="/cart" className="nav-cart-link" aria-label={`Cart, ${cartCount} items`}>
+              <Link to={ROUTES.CART} className="nav-cart-link" aria-label={`Cart, ${cartCount} items`}>
                 <span className="nav-cart-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
@@ -117,7 +151,7 @@ const Navbar = () => {
             )}
             {isAuthenticated() && (
               <Link
-                to="/wishlist"
+                to={ROUTES.WISHLIST}
                 className="nav-cart-link nav-wishlist-link"
                 aria-label={`Wishlist, ${wishlistCount || 0} items`}
                 title="Wishlist"
@@ -164,22 +198,22 @@ const Navbar = () => {
                     {userMenuOpen && (
                       <div className="nav-user-dropdown" role="menu">
                         {isCustomer && (
-                          <Link to="/profile" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          <Link to={ROUTES.PROFILE} className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             Profile
                           </Link>
                         )}
                         {isCustomer && (
-                          <Link to="/orders" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          <Link to={ROUTES.ORDERS} className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             My Orders
                           </Link>
                         )}
                         {isVendor && (
-                          <Link to="/dashboard" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          <Link to={ROUTES.VENDOR_DASHBOARD} className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             Dashboard
                           </Link>
                         )}
                         {isAdmin && (
-                          <Link to="/admin" className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                          <Link to={ROUTES.ADMIN_DASHBOARD} className="nav-user-dropdown-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                             Admin
                           </Link>
                         )}
@@ -193,11 +227,14 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <Link to="/login" className={`nav-auth-link ${location.pathname === '/login' ? 'active' : ''}`}>
+                <Link to={ROUTES.LOGIN} className={`nav-auth-link ${location.pathname === ROUTES.LOGIN ? 'active' : ''}`}>
                   Sign In
                 </Link>
-                <Link to="/register" className="nav-register-btn">
+                <Link to={ROUTES.REGISTER} className="nav-register-btn">
                   Create Account
+                </Link>
+                <Link to={ROUTES.ADMIN_DASHBOARD} className="nav-admin-link" title="Admin sign in">
+                  Admin
                 </Link>
               </>
             )}

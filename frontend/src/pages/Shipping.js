@@ -1,21 +1,24 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import './About.css';
 
 const Shipping = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, hasRole } = useAuth();
 
   useEffect(() => {
     if (loading) return;
-    if (user && (user.role === 'vendor' || user.role === 'admin')) {
-      navigate('/dashboard', { replace: true });
+    if (user && hasRole(['admin'])) {
+      navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+    } else if (user && hasRole(['vendor'])) {
+      navigate(ROUTES.VENDOR_DASHBOARD, { replace: true });
     }
-  }, [loading, user, navigate]);
+  }, [loading, user, hasRole, navigate]);
 
-  if (user && (user.role === 'vendor' || user.role === 'admin')) {
+  if (user && (hasRole(['vendor']) || hasRole(['admin']))) {
     return null;
   }
 
@@ -43,10 +46,10 @@ const Shipping = () => {
           <section className="about-section">
             <h2>Tracking</h2>
             <p>
-              Once your order ships, you’ll receive an email with a tracking link. You can also check status in <Link to="/orders">My Orders</Link>.
+              Once your order ships, you’ll receive an email with a tracking link. You can also check status in <Link to={ROUTES.ORDERS}>My Orders</Link>.
             </p>
           </section>
-          <Link to="/products" className="about-cta">Continue shopping</Link>
+          <Link to={ROUTES.PRODUCTS} className="about-cta">Continue shopping</Link>
         </div>
       </main>
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import { getPasswordErrorMessage, getPasswordRuleResults } from '../utils/passwordStrength';
 import './Profile.css';
@@ -32,10 +33,11 @@ const Profile = () => {
   const { user, refreshUser, hasRole } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
-  // Vendors use Dashboard → Vendor Profile only; redirect to dashboard
+  // Vendors/admins use Dashboard; redirect to correct dashboard
   useEffect(() => {
-    if (user && hasRole && hasRole(['vendor', 'admin'])) {
-      navigate('/dashboard', { replace: true });
+    if (user && hasRole) {
+      if (hasRole(['admin'])) navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+      else if (hasRole(['vendor'])) navigate(ROUTES.VENDOR_DASHBOARD, { replace: true });
     }
   }, [user, hasRole, navigate]);
   const [form, setForm] = useState({ name: '', email: '' });
@@ -328,7 +330,7 @@ const Profile = () => {
                   <button type="button" className="profile-btn profile-btn-primary" onClick={handleStartEdit}>
                     Edit profile
                   </button>
-                  <Link to="/" className="profile-btn profile-btn-secondary">
+                  <Link to={ROUTES.HOME} className="profile-btn profile-btn-secondary">
                     Back to Home
                   </Link>
                 </div>

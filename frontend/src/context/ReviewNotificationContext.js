@@ -68,6 +68,22 @@ export const ReviewNotificationProvider = ({ children }) => {
     }
   }, [reviews]);
 
+  // On first load when no "last viewed" is set, treat all current reviews as already seen (no popup for old data)
+  const hasSetReviewsBaseline = React.useRef(false);
+  useEffect(() => {
+    if (!Array.isArray(reviews) || reviews.length === 0 || lastViewedAt > 0) return;
+    if (!hasSetReviewsBaseline.current) {
+      hasSetReviewsBaseline.current = true;
+      const maxCreated = Math.max(...reviews.map((r) => new Date(r.createdAt || 0).getTime()));
+      setLastViewedAt(maxCreated);
+      try {
+        localStorage.setItem(STORAGE_KEY, String(maxCreated));
+      } catch {
+        // ignore
+      }
+    }
+  }, [reviews, lastViewedAt]);
+
   const unseenReviewCount = useMemo(() => {
     if (!Array.isArray(reviews) || reviews.length === 0) return 0;
     if (lastViewedAt <= 0) return reviews.length;

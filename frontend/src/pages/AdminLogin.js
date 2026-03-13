@@ -1,22 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import './Auth.css';
+import './AdminLogin.css';
 
-const Login = () => {
+/**
+ * Admin-only sign in. Shown at /admin when user is not logged in.
+ * On success, only admins are allowed; others see "Admin access only" and can go to customer login.
+ */
+const AdminLogin = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { login, logout } = useAuth();
-
-  const blockedParam = searchParams.get('blocked') === '1';
-
-  useEffect(() => {
-    if (blockedParam) {
-      setSearchParams({}, { replace: true });
-    }
-  }, [blockedParam, setSearchParams]);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -24,7 +20,7 @@ const Login = () => {
     rememberMe: false
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(blockedParam ? 'Your account has been blocked. Please contact support.' : '');
+  const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
@@ -65,72 +61,71 @@ const Login = () => {
 
     if (result.success) {
       if (result.user?.role === 'admin') {
-        logout();
-        setError('Use the admin portal to sign in. Go to Admin login page.');
-        setLoading(false);
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+        }
+        navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
         return;
       }
-      if (rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
-      }
-      const isVendor = result.user && result.user.role === 'vendor';
-      const dest = isVendor ? ROUTES.VENDOR_DASHBOARD : ROUTES.HOME;
-      navigate(dest);
+      logout();
+      setError('Please use the customer / vendor login page to sign in. This page is for administrators only.');
     } else {
-      setError(result.message);
+      setError(result.message || 'Sign in failed');
     }
 
     setLoading(false);
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page admin-login-page">
       <Navbar />
-      
-      <div className="auth-hero">
-        <h1>Welcome to Store</h1>
-        <p>Your trusted partner for quality electronics and accessories</p>
+
+      <div className="auth-hero admin-login-hero">
+        <h1>Admin</h1>
+        <p>Sign in to manage the platform</p>
       </div>
 
       <div className="auth-container">
-        <div className="auth-card">
+        <div className="auth-card admin-login-card">
           <div className="auth-header">
-            <h2>Sign In</h2>
-            <p>Access your Store account</p>
+            <h2>Admin Sign In</h2>
+            <p>Administrator access only</p>
           </div>
 
           {error && <div className="form-error" role="alert">{error}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="email">Email Address</label>
+              <label htmlFor="admin-email">Email Address</label>
               <div className="input-wrapper">
                 <span className="input-icon">✉</span>
                 <input
                   type="email"
-                  id="email"
+                  id="admin-email"
                   name="email"
                   value={email}
                   onChange={handleChange}
-                  placeholder="Enter your email"
+                  placeholder="Admin email"
                   className={fieldErrors.email ? 'input-error' : ''}
+                  autoComplete="email"
                 />
               </div>
               {fieldErrors.email && <p className="form-field-error">{fieldErrors.email}</p>}
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="admin-password">Password</label>
               <div className="input-wrapper has-toggle">
                 <span className="input-icon">🔒</span>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  id="password"
+                  id="admin-password"
                   name="password"
                   value={password}
                   onChange={handleChange}
-                  placeholder="Enter your password"
+                  placeholder="Password"
                   className={fieldErrors.password ? 'input-error' : ''}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -156,9 +151,6 @@ const Login = () => {
                 <span className="checkmark"></span>
                 Remember me
               </label>
-              <Link to={ROUTES.FORGOT_PASSWORD} className="forgot-link">
-                Forgot password?
-              </Link>
             </div>
 
             <button
@@ -170,9 +162,12 @@ const Login = () => {
             </button>
           </form>
 
-          <div className="auth-footer">
+          <div className="auth-footer admin-login-footer">
             <p>
-              Don't have an account? <Link to={ROUTES.REGISTER}>Create Account</Link>
+              <Link to={ROUTES.LOGIN} className="admin-login-back">← Customer / Vendor login</Link>
+            </p>
+            <p className="admin-login-home">
+              <Link to={ROUTES.HOME}>Back to store</Link>
             </p>
           </div>
         </div>
@@ -181,4 +176,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default AdminLogin;

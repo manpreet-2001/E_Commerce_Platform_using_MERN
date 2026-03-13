@@ -412,6 +412,112 @@
   text-decoration: underline;
 }
 
+.terms-label-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #1a1a1a;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.terms-label-link:hover {
+  text-decoration: underline;
+}
+
+/* Policy modal (Terms / Privacy popup) */
+.auth-policy-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.auth-policy-modal {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.auth-policy-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.auth-policy-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.auth-policy-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  margin: -4px;
+}
+
+.auth-policy-modal-close:hover {
+  color: #0f172a;
+}
+
+.auth-policy-modal-body {
+  overflow-y: auto;
+  padding: 24px;
+  flex: 1;
+}
+
+.auth-policy-modal-inner {
+  box-shadow: none;
+  padding: 0;
+  border: none;
+}
+
+.auth-policy-modal-inner .about-title {
+  display: none;
+}
+
+.auth-policy-modal-actions {
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.auth-policy-modal-cancel {
+  padding: 10px 20px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #0f172a;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.auth-policy-modal-cancel:hover {
+  background: #e2e8f0;
+}
+
 /* Submit Button */
 .btn-submit {
   width: 100%;

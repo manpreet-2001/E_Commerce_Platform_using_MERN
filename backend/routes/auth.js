@@ -416,6 +416,58 @@ router.get('/me', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/auth/saved-addresses
+// @desc    Get current user's saved addresses (for checkout)
+// @access  Private
+router.get('/saved-addresses', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('savedAddresses').lean();
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User no longer exists' });
+    }
+    const list = user.savedAddresses || [];
+    res.json({ success: true, data: list });
+  } catch (error) {
+    console.error('GET /api/auth/saved-addresses error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/saved-addresses
+// @desc    Add a saved address for the current user. Body: fullName, address, city, state?, zip?, country, label?
+// @access  Private
+router.post('/saved-addresses', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User no longer exists' });
+    }
+    const { fullName, address, city, state, zip, country, label } = req.body;
+    if (!(fullName && fullName.trim()) || !(address && address.trim()) || !(city && city.trim()) || !(country && country.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Full name, address, city and country are required'
+      });
+    }
+    const entry = {
+      fullName: (fullName || '').trim(),
+      address: (address || '').trim(),
+      city: (city || '').trim(),
+      state: (state || '').trim() || '',
+      zip: (zip || '').trim() || '',
+      country: (country || '').trim(),
+      label: (label || '').trim() || ''
+    };
+    if (!user.savedAddresses) user.savedAddresses = [];
+    user.savedAddresses.push(entry);
+    await user.save();
+    res.status(201).json({ success: true, data: user.savedAddresses });
+  } catch (error) {
+    console.error('POST /api/auth/saved-addresses error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // @route   PUT /api/auth/profile
 // @desc    Update current user profile (name, email). At least one field required.
 // @access  Private

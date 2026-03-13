@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { ROUTES } from '../constants/routes';
 import {
   BarChart,
   Bar,
@@ -19,8 +20,10 @@ import {
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { useReviewNotification } from '../context/ReviewNotificationContext';
+import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { buildCsv, downloadCsv } from '../utils/csvExport';
 import VendorProductForm from '../components/VendorProductForm';
+import OrderHistoryModal from '../components/OrderHistoryModal';
 import './VendorDashboard.css';
 
 const ORDERS_VIEWED_KEY_ADMIN = 'adminOrdersLastViewedAt';
@@ -116,6 +119,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [orderHistoryModalOrder, setOrderHistoryModalOrder] = useState(null);
+  const [showLoadingUI, setShowLoadingUI] = useState(false);
+  const LOADING_DELAY_MS = 300;
   const [vendors, setVendors] = useState([]);
   const [vendorFilter, setVendorFilter] = useState('');
   const [productCategoryFilter, setProductCategoryFilter] = useState('');
@@ -205,6 +211,15 @@ const AdminDashboard = () => {
   useEffect(() => { setExportOrdersFrom(orderDateFrom || ''); }, [orderDateFrom]);
   useEffect(() => { setExportOrdersTo(orderDateTo || ''); }, [orderDateTo]);
 
+  useEffect(() => {
+    if (!loading) {
+      setShowLoadingUI(false);
+      return;
+    }
+    const t = setTimeout(() => setShowLoadingUI(true), LOADING_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [loading]);
+
   const fetchVendors = useCallback(async () => {
     try {
       const res = await axios.get('/api/auth/vendors');
@@ -267,6 +282,10 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  const { socket } = useSocket();
+  useSocketEvent(socket, 'products:updated', fetchProducts);
+  useSocketEvent(socket, 'orders:updated', fetchOrders);
+
   const markOrdersViewed = useCallback(() => {
     if (!Array.isArray(orders) || orders.length === 0) return;
     const maxUpdated = Math.max(
@@ -292,6 +311,33 @@ const AdminDashboard = () => {
       // ignore
     }
   }, [orders]);
+
+  // On first load when no "last viewed" is set, treat all current orders as already seen (no popup for old data)
+  const hasSetOrdersBaseline = React.useRef(false);
+  const hasSetNotificationsBaseline = React.useRef(false);
+  useEffect(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    if (ordersLastViewedAt <= 0 && !hasSetOrdersBaseline.current) {
+      hasSetOrdersBaseline.current = true;
+      const maxUpdated = Math.max(...orders.map((o) => new Date(o.updatedAt || o.createdAt || 0).getTime()));
+      setOrdersLastViewedAt(maxUpdated);
+      try {
+        localStorage.setItem(ORDERS_VIEWED_KEY_ADMIN, String(maxUpdated));
+      } catch {
+        // ignore
+      }
+    }
+    if (notificationsLastViewedAt <= 0 && !hasSetNotificationsBaseline.current) {
+      hasSetNotificationsBaseline.current = true;
+      const maxUpdated = Math.max(...orders.map((o) => new Date(o.updatedAt || o.createdAt || 0).getTime()));
+      setNotificationsLastViewedAt(maxUpdated);
+      try {
+        localStorage.setItem(NOTIFICATIONS_VIEWED_KEY_ADMIN, String(maxUpdated));
+      } catch {
+        // ignore
+      }
+    }
+  }, [orders, ordersLastViewedAt, notificationsLastViewedAt]);
 
   // Auto-clear review popup/badge when Reviews tab is opened
   useEffect(() => {
@@ -688,6 +734,9 @@ const AdminDashboard = () => {
     setError('');
     try {
       const params = new URLSearchParams();
+      if (orderStatusFilter) params.set('status', orderStatusFilter);
+      if (orderVendorFilter) params.set('vendor', orderVendorFilter);
+      if (orderSearchQuery) params.set('search', orderSearchQuery);
       if (exportOrdersSort) params.set('sort', exportOrdersSort);
       if (exportOrdersFrom) params.set('from', exportOrdersFrom);
       if (exportOrdersTo) params.set('to', exportOrdersTo);
@@ -839,8 +888,10 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {loading ? (
+            {loading && showLoadingUI ? (
               <div className="vendor-dashboard-loading">Loading…</div>
+            ) : loading ? (
+              <div className="vendor-dashboard-loading vendor-dashboard-loading-brief">Loading…</div>
             ) : activeTab === 'overview' ? (
               <div className="vendor-overview-page">
                 <div className="vendor-overview-header">
@@ -848,7 +899,7 @@ const AdminDashboard = () => {
                     <h1 className="vendor-overview-title">Overview</h1>
                     <p className="vendor-overview-subtitle">Platform-wide snapshot.</p>
                   </div>
-                  <Link to="/products" className="vendor-btn vendor-btn-secondary">View Store</Link>
+                  <Link to={ROUTES.PRODUCTS} className="vendor-btn vendor-btn-secondary">View Store</Link>
                 </div>
                 <div className="vendor-kpi-cards">
                   <div className="vendor-kpi-card">
@@ -957,7 +1008,7 @@ const AdminDashboard = () => {
                     </div>
                   )}
                 </section>
-                <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : activeTab === 'analytics' ? (
               <div className="vendor-analytics-page" data-section="analytics">
@@ -966,7 +1017,7 @@ const AdminDashboard = () => {
                     <h1 className="vendor-dashboard-title">Platform Analytics</h1>
                     <p className="vendor-dashboard-greeting">Sales and performance over the last 30 days.</p>
                   </div>
-                  <Link to="/products" className="vendor-btn vendor-btn-secondary">View Store</Link>
+                  <Link to={ROUTES.PRODUCTS} className="vendor-btn vendor-btn-secondary">View Store</Link>
                 </div>
 
                 <section className="vendor-analytics-section" aria-labelledby="analytics-sales-overview">
@@ -1139,7 +1190,7 @@ const AdminDashboard = () => {
                   )}
                 </section>
 
-                <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : activeTab === 'notifications' ? (
               <div className="vendor-notifications-page">
@@ -1177,13 +1228,13 @@ const AdminDashboard = () => {
                     ))}
                   </ul>
                 )}
-                <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : activeTab === 'export' ? (
               <div className="vendor-export-page">
                 <div className="vendor-content-header">
                   <h1 className="vendor-dashboard-title">Export Orders to CSV</h1>
-                  <p className="vendor-dashboard-greeting">Download order data with sort and date filters.</p>
+                  <p className="vendor-dashboard-greeting">Export uses the same Status, Vendor, and Customer filters as Order Management, plus the sort and date range below.</p>
                 </div>
                 <div className="vendor-export-card">
                   <form onSubmit={handleExportOrders} className="vendor-export-form">
@@ -1231,7 +1282,7 @@ const AdminDashboard = () => {
                     </div>
                   </form>
                 </div>
-                <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
               </div>
             ) : (
               <>
@@ -1430,7 +1481,7 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       )}
-                      <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                      <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
                     </div>
                   )}
                   {activeTab === 'reviews' && (
@@ -1555,7 +1606,7 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       )}
-                      <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                      <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
                     </div>
                   )}
                   {activeTab === 'users' && (
@@ -1787,7 +1838,7 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       )}
-                      <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                      <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
                     </div>
                   )}
                   {activeTab === 'orders' && (
@@ -1875,13 +1926,17 @@ const AdminDashboard = () => {
                             Clear
                           </button>
                         )}
+                      </div>
+                      <div className="admin-order-export-section" aria-label="Export orders">
+                        <span className="admin-order-export-label">Export data</span>
                         <button
                           type="button"
-                          className="vendor-export-csv-btn"
+                          className="admin-order-export-csv-btn"
                           onClick={openExportOrders}
                           disabled={orders.length === 0}
                           aria-label="Export orders to CSV"
                         >
+                          <span className="admin-order-export-icon" aria-hidden>↓</span>
                           Export to CSV
                         </button>
                       </div>
@@ -1952,72 +2007,91 @@ const AdminDashboard = () => {
                       {orders.length === 0 ? (
                         <p className="vendor-dashboard-overview-text">No orders match your filters.</p>
                       ) : (
-                        <div className="vendor-orders-table-wrap">
-                          <table className="vendor-orders-table admin-orders-table">
-                            <thead>
-                              <tr>
-                                <th>Order</th>
-                                <th>Date</th>
-                                <th>Customer</th>
-                                <th>Vendors</th>
-                                <th>Items</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {orders.map((order) => {
-                                const vendorNames = [...new Set((order.items || [])
-                                  .map((i) => i.product?.vendor?.name || i.product?.vendor?.email || '—')
-                                  .filter(Boolean))];
-                                const vendorList = vendorNames.length ? vendorNames.join(', ') : '—';
-                                return (
-                                  <tr key={order._id}>
-                                    <td>#{order._id.slice(-6).toUpperCase()}</td>
-                                    <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString(undefined, { dateStyle: 'short' }) + ' ' + new Date(order.createdAt).toLocaleTimeString(undefined, { timeStyle: 'short' }) : '—'}</td>
-                                    <td>
-                                      <span className="admin-order-customer-name">{order.user?.name || '—'}</span>
-                                      <br />
-                                      <span className="admin-order-customer-email">{order.user?.email || '—'}</span>
-                                    </td>
-                                    <td className="admin-order-vendors-cell">{vendorList}</td>
-                                    <td>
-                                      <ul className="admin-order-items-inline">
-                                        {(order.items || []).slice(0, 3).map((item, idx) => (
-                                          <li key={idx}>{item.product?.name} × {item.quantity}</li>
-                                        ))}
-                                        {(order.items || []).length > 3 && (
-                                          <li>+{(order.items || []).length - 3} more</li>
-                                        )}
-                                      </ul>
-                                    </td>
-                                    <td>{formatPrice(order.totalAmount || 0)}</td>
-                                    <td>
-                                      <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>{order.status}</span>
-                                    </td>
-                                    <td>
-                                      <select
-                                        className="vendor-order-status-select"
-                                        value={order.status}
-                                        onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
-                                        disabled={updatingOrderId === order._id}
-                                        aria-label={`Change status for order ${order._id.slice(-6)}`}
-                                      >
-                                        {ORDER_STATUSES.map((s) => (
-                                          <option key={s.value} value={s.value}>{s.label}</option>
-                                        ))}
-                                      </select>
-                                      {updatingOrderId === order._id && <span className="vendor-order-updating">…</span>}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
+                        (() => {
+                          const byStatus = { pending: [], confirmed: [], shipped: [], delivered: [], cancelled: [] };
+                          orders.forEach((o) => {
+                            if (byStatus[o.status]) byStatus[o.status].push(o);
+                          });
+                          const statusSections = [
+                            { key: 'pending', label: 'Pending', orders: byStatus.pending },
+                            { key: 'confirmed', label: 'Confirmed', orders: byStatus.confirmed },
+                            { key: 'shipped', label: 'Shipped', orders: byStatus.shipped },
+                            { key: 'delivered', label: 'Delivered', orders: byStatus.delivered },
+                            { key: 'cancelled', label: 'Cancelled', orders: byStatus.cancelled },
+                          ].filter((s) => s.orders.length > 0 && (!orderStatusFilter || s.key === orderStatusFilter));
+
+                          return statusSections.map((section) => (
+                            <div key={section.key} className="vendor-order-status-block admin-order-status-block">
+                              <h3 className="vendor-order-status-heading">{section.label}</h3>
+                              <div className="vendor-orders-table-wrap admin-orders-table-wrap">
+                                <table className="vendor-orders-table admin-orders-table admin-orders-grouped-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Order ID</th>
+                                      <th>Customer</th>
+                                      <th>Products</th>
+                                      <th>Date</th>
+                                      <th>Total</th>
+                                      <th>Status</th>
+                                      <th>Actions</th>
+                                      <th>History</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {section.orders.map((order) => (
+                                      <tr key={order._id}>
+                                        <td>#{order._id.slice(-6).toUpperCase()}</td>
+                                        <td>
+                                          <span className="admin-order-customer-name">{order.user?.name || '—'}</span>
+                                          <br />
+                                          <span className="admin-order-customer-email">{order.user?.email || '—'}</span>
+                                        </td>
+                                        <td>
+                                          <ul className="admin-order-items-inline admin-order-products-list">
+                                            {(order.items || []).map((item, idx) => (
+                                              <li key={idx}>{item.product?.name || 'Product'} (×{item.quantity})</li>
+                                            ))}
+                                          </ul>
+                                        </td>
+                                        <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString(undefined, { dateStyle: 'short' }) + ' ' + new Date(order.createdAt).toLocaleTimeString(undefined, { timeStyle: 'short' }) : '—'}</td>
+                                        <td className="admin-order-total-cell">{formatPrice(order.totalAmount || 0)}</td>
+                                        <td>
+                                          <span className={`vendor-order-pill vendor-order-pill-${order.status}`}>{order.status}</span>
+                                        </td>
+                                        <td>
+                                          <select
+                                            className="vendor-order-status-select"
+                                            value={order.status}
+                                            onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
+                                            disabled={updatingOrderId === order._id}
+                                            aria-label={`Change status for order ${order._id.slice(-6)}`}
+                                          >
+                                            {ORDER_STATUSES.map((s) => (
+                                              <option key={s.value} value={s.value}>{s.label}</option>
+                                            ))}
+                                          </select>
+                                          {updatingOrderId === order._id && <span className="vendor-order-updating">…</span>}
+                                        </td>
+                                        <td>
+                                          <button
+                                            type="button"
+                                            className="vendor-order-history-btn"
+                                            onClick={() => setOrderHistoryModalOrder(order)}
+                                            aria-label={`View history for order ${order._id.slice(-6)}`}
+                                          >
+                                            View history
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          ));
+                        })()
                       )}
-                      <Link to="/products" className="vendor-dashboard-back">← Back to Shop</Link>
+                      <Link to={ROUTES.PRODUCTS} className="vendor-dashboard-back">← Back to Shop</Link>
                     </div>
                   )}
                 </div>
@@ -2026,6 +2100,12 @@ const AdminDashboard = () => {
           </div>
         </main>
       </div>
+      {orderHistoryModalOrder && (
+        <OrderHistoryModal
+          order={orderHistoryModalOrder}
+          onClose={() => setOrderHistoryModalOrder(null)}
+        />
+      )}
     </div>
   );
 };

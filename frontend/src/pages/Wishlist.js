@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { ROUTES } from '../constants/routes';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { getImageUrl } from '../utils/imageUrl';
@@ -63,7 +64,7 @@ const Wishlist = () => {
               <span className="wishlist-empty-icon" aria-hidden="true">♥</span>
               <h2>Your wishlist is empty</h2>
               <p>Save items you like by clicking the heart on product pages or in the shop.</p>
-              <Link to="/products" className="wishlist-cta">Browse products</Link>
+              <Link to={ROUTES.PRODUCTS} className="wishlist-cta">Browse products</Link>
             </div>
           ) : (
             <ul className="wishlist-list">
@@ -75,7 +76,7 @@ const Wishlist = () => {
                 const inStock = stock > 0;
                 return (
                   <li key={id} className="wishlist-item">
-                    <Link to={`/products/${id}`} className="wishlist-item-image-link">
+                    <Link to={ROUTES.PRODUCT_DETAIL(id)} className="wishlist-item-image-link">
                       {product.image ? (
                         <img src={getImageUrl(product.image)} alt="" className="wishlist-item-image" />
                       ) : (
@@ -83,7 +84,7 @@ const Wishlist = () => {
                       )}
                     </Link>
                     <div className="wishlist-item-details">
-                      <Link to={`/products/${id}`} className="wishlist-item-name">{name}</Link>
+                      <Link to={ROUTES.PRODUCT_DETAIL(id)} className="wishlist-item-name">{name}</Link>
                       <p className="wishlist-item-price">{formatPrice(price)}</p>
                       <div className="wishlist-item-actions">
                         <button
@@ -112,7 +113,7 @@ const Wishlist = () => {
 
           {wishlistItems.length > 0 && (
             <div className="wishlist-footer">
-              <Link to="/products" className="wishlist-cta wishlist-cta-secondary">Continue shopping</Link>
+              <Link to={ROUTES.PRODUCTS} className="wishlist-cta wishlist-cta-secondary">Continue shopping</Link>
             </div>
           )}
         </div>
